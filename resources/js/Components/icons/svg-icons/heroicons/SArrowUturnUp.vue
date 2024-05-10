@@ -1,0 +1,48 @@
+<script setup>
+import { computed } from 'vue';
+
+const props = defineProps({
+    size: {
+        type: String,
+        required: false,
+    }
+})
+
+const allowedSizes = {
+    default: '7',
+    sm: '5',
+    md: '7',
+    lg: '16',
+    xl: '32',
+    xxl: '64',
+}
+
+const computedSize = computed(() => {
+    if (!props?.size) {
+        return allowedSizes.default;
+    }
+
+    if (!isNaN(parseInt(props?.size ?? null))) {
+        let numVal = parseInt(props?.size ?? null);
+
+        if (numVal < 0 || numVal > 100) {
+            return allowedSizes.default;
+        }
+
+        return numVal;
+    }
+
+    if (props?.size in allowedSizes) {
+        return allowedSizes[`${props?.size}`] ?? allowedSizes.default;
+    }
+
+    return allowedSizes.default;
+})
+</script>
+
+<template>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" data-slot="icon" class="heroicons" :class="`w-${computedSize} h-${computedSize}`">
+  <path fill-rule="evenodd" d="M21.53 9.53a.75.75 0 0 1-1.06 0l-4.72-4.72V15a6.75 6.75 0 0 1-13.5 0v-3a.75.75 0 0 1 1.5 0v3a5.25 5.25 0 1 0 10.5 0V4.81L9.53 9.53a.75.75 0 0 1-1.06-1.06l6-6a.75.75 0 0 1 1.06 0l6 6a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd"></path>
+</svg>
+
+</template>

@@ -29,6 +29,8 @@ export default defineConfig({
             '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
             '@resources': fileURLToPath(new URL('./resources', import.meta.url)),
             '@public': fileURLToPath(new URL('./public', import.meta.url)),
+            '@vendor': fileURLToPath(new URL('./vendor', import.meta.url)),
+            '@base': fileURLToPath(new URL('./', import.meta.url)),
             '@asset': fileURLToPath(new URL('./public', import.meta.url)),
         }
     }

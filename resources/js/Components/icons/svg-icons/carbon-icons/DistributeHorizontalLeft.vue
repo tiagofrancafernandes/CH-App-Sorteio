@@ -1,0 +1,46 @@
+<script setup>
+import { computed } from 'vue';
+
+const props = defineProps({
+    size: {
+        type: String,
+        required: false,
+    }
+})
+
+const allowedSizes = {
+    default: '7',
+    sm: '5',
+    md: '7',
+    lg: '16',
+    xl: '32',
+    xxl: '64',
+}
+
+const computedSize = computed(() => {
+    if (!props?.size) {
+        return allowedSizes.default;
+    }
+
+    if (!isNaN(parseInt(props?.size ?? null))) {
+        let numVal = parseInt(props?.size ?? null);
+
+        if (numVal < 0 || numVal > 100) {
+            return allowedSizes.default;
+        }
+
+        return numVal;
+    }
+
+    if (props?.size in allowedSizes) {
+        return allowedSizes[`${props?.size}`] ?? allowedSizes.default;
+    }
+
+    return allowedSizes.default;
+})
+</script>
+
+<template>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" class="blade-carbon-icons" :class="`w-${computedSize} h-${computedSize}`"><defs></defs><title>distribute--horizontal-left</title><path d="M28,22H24a2.0021,2.0021,0,0,1-2-2V12a2.0021,2.0021,0,0,1,2-2h4a2.0021,2.0021,0,0,1,2,2v8A2.0021,2.0021,0,0,1,28,22ZM24,12v8h4V12Z"></path><rect x="18" y="2" width="2" height="28"></rect><path d="M12,26H8a2.0021,2.0021,0,0,1-2-2V8A2.0021,2.0021,0,0,1,8,6h4a2.0021,2.0021,0,0,1,2,2V24A2.0021,2.0021,0,0,1,12,26ZM8,8V24h4V8Z"></path><rect x="2" y="2" width="2" height="28"></rect><rect id="_Transparent_Rectangle_" data-name="&lt;Transparent Rectangle&gt;" class="cls-1" width="32" height="32" style="fill:none"></rect></svg>
+
+</template>

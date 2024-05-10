@@ -1,0 +1,46 @@
+<script setup>
+import { computed } from 'vue';
+
+const props = defineProps({
+    size: {
+        type: String,
+        required: false,
+    }
+})
+
+const allowedSizes = {
+    default: '7',
+    sm: '5',
+    md: '7',
+    lg: '16',
+    xl: '32',
+    xxl: '64',
+}
+
+const computedSize = computed(() => {
+    if (!props?.size) {
+        return allowedSizes.default;
+    }
+
+    if (!isNaN(parseInt(props?.size ?? null))) {
+        let numVal = parseInt(props?.size ?? null);
+
+        if (numVal < 0 || numVal > 100) {
+            return allowedSizes.default;
+        }
+
+        return numVal;
+    }
+
+    if (props?.size in allowedSizes) {
+        return allowedSizes[`${props?.size}`] ?? allowedSizes.default;
+    }
+
+    return allowedSizes.default;
+})
+</script>
+
+<template>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" class="blade-carbon-icons" :class="`w-${computedSize} h-${computedSize}`"><defs></defs><polygon points="30 15 17 15 17 2 15 2 15 15 2 15 2 17 15 17 15 30 17 30 17 17 30 17 30 15"></polygon><path d="M5,30a3,3,0,1,1,3-3A3.0033,3.0033,0,0,1,5,30Zm0-4a1,1,0,1,0,1,1A1.001,1.001,0,0,0,5,26Z"></path><path d="M8,8a3,3,0,1,1,3-3A3.0033,3.0033,0,0,1,8,8ZM8,4A1,1,0,1,0,9,5,1.001,1.001,0,0,0,8,4Z"></path><path d="M22,13a3,3,0,1,1,3-3A3.0033,3.0033,0,0,1,22,13Zm0-4a1,1,0,1,0,1,1A1.001,1.001,0,0,0,22,9Z"></path><circle cx="11" cy="11" r="2"></circle><circle cx="11" cy="21" r="2"></circle><circle cx="21" cy="21" r="2"></circle><circle cx="22" cy="28" r="2"></circle><circle cx="28" cy="24" r="2"></circle><circle cx="4" cy="11" r="2"></circle><circle cx="28" cy="4" r="2"></circle><rect id="_Transparent_Rectangle_" data-name="&lt;Transparent Rectangle&gt;" class="cls-1" width="32" height="32" style="fill: none"></rect></svg>
+
+</template>

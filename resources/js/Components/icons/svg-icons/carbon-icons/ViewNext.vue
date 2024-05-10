@@ -1,0 +1,46 @@
+<script setup>
+import { computed } from 'vue';
+
+const props = defineProps({
+    size: {
+        type: String,
+        required: false,
+    }
+})
+
+const allowedSizes = {
+    default: '7',
+    sm: '5',
+    md: '7',
+    lg: '16',
+    xl: '32',
+    xxl: '64',
+}
+
+const computedSize = computed(() => {
+    if (!props?.size) {
+        return allowedSizes.default;
+    }
+
+    if (!isNaN(parseInt(props?.size ?? null))) {
+        let numVal = parseInt(props?.size ?? null);
+
+        if (numVal < 0 || numVal > 100) {
+            return allowedSizes.default;
+        }
+
+        return numVal;
+    }
+
+    if (props?.size in allowedSizes) {
+        return allowedSizes[`${props?.size}`] ?? allowedSizes.default;
+    }
+
+    return allowedSizes.default;
+})
+</script>
+
+<template>
+    <svg xmlns="http://www.w3.org/2000/svg" data-name="Layer 1" viewBox="0 0 32 32" fill="currentColor" class="blade-carbon-icons" :class="`w-${computedSize} h-${computedSize}`"><defs></defs><polygon points="20.587 22 15 16.41 15 7 16.998 7 16.998 15.582 22 20.587 20.587 22"></polygon><path d="M16,2A13.9158,13.9158,0,0,1,26,6.2343V2h2v8H20V8h4.9217A11.9818,11.9818,0,1,0,28,16h2A14,14,0,1,1,16,2Z" transform="translate(0 0)"></path><rect id="_Transparent_Rectangle_" data-name="&lt;Transparent Rectangle&gt;" class="cls-1" width="32" height="32" style="fill: none"></rect></svg>
+
+</template>

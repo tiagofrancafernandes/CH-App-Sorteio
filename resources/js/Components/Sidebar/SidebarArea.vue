@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { useSidebarStore } from '@/stores/sidebar'
 import { onClickOutside } from '@vueuse/core'
 import { ref } from 'vue'
@@ -346,6 +346,10 @@ const menuGroups = ref([
     ]
   }
 ])
+
+const buyNowAction = () => {
+    console.log('buyNowAction');
+};
 </script>
 
 <template>
@@ -405,15 +409,15 @@ const menuGroups = ref([
         <div
             class="mx-auto mb-10 w-full max-w-60 rounded-lg border border-strokedark bg-boxdark py-6 px-4 text-center shadow-default"
         >
-            <h3 class="mb-1 font-semibold text-white">TailAdmin Pro</h3>
-            <p class="mb-4 text-xs text-bodydark2">Get All Dashboards and 300+ UI Elements</p>
+            <h3 class="mb-1 font-semibold text-white">Fast Ticket Buy</h3>
+            <p class="mb-4 text-xs text-bodydark2">Now is your turn</p>
             <a
-                href="https://tailadmin.com/pricing"
-                target="_blank"
+                href="#buy-now"
                 rel="nofollow"
+                v-on:click.prevent="buyNowAction"
                 class="flex items-center justify-center rounded-md bg-primary p-2 font-medium text-white hover:bg-opacity-90"
             >
-                Purchase Now
+                Take your ticket
             </a>
         </div>
       <!-- Promo Box -->
