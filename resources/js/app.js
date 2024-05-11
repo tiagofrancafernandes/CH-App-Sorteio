@@ -14,6 +14,10 @@ import { Link } from '@inertiajs/vue3';
 import VueApexCharts from 'vue3-apexcharts'
 import AppExtra from '@/extra/plugins/AppExtra';
 
+import * as StringHelper from '@/Helpers/string/index';
+
+globalThis.StringHelper = StringHelper;
+
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({

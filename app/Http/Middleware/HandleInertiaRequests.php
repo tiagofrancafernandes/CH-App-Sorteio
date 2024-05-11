@@ -34,6 +34,12 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'activeWallet' => $request->user()?->activeWallet(),
+            'urls' => [
+                'web' => $asset = asset('/'),
+                'asset' => $asset,
+                'api' => asset('api/'),
+            ],
         ];
     }
 }

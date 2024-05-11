@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useSidebarStore } from '@/stores/sidebar'
-import DarkModeSwitcher from './DarkModeSwitcher.vue'
-import DropdownMessage from './DropdownMessage.vue'
-import DropdownNotification from './DropdownNotification.vue'
-import DropdownUser from './DropdownUser.vue'
+import DarkModeSwitcher from '@/Components/Header/DarkModeSwitcher.vue'
+import DropdownMessage from '@/Components/Header/DropdownMessage.vue'
+import DropdownWallet from '@/Components/Header/DropdownWallet.vue'
+import DropdownNotification from '@/Components/Header/DropdownNotification.vue'
+import DropdownUser from '@/Components/Header/DropdownUser.vue'
 import { computed, ref } from "vue";
 import { Link } from '@inertiajs/vue3';
 
@@ -185,6 +186,10 @@ const handleItemClick = (index: number) => {
                     <!-- Chat Notification Area -->
                     <DropdownMessage />
                     <!-- Chat Notification Area -->
+
+                    <!-- Wallet Area -->
+                    <DropdownWallet />
+                    <!-- Wallet Area -->
                 </ul>
 
                 <!-- User Area -->

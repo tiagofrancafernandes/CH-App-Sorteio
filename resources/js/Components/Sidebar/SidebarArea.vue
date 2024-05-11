@@ -411,14 +411,14 @@ const buyNowAction = () => {
         >
             <h3 class="mb-1 font-semibold text-white">Fast Ticket Buy</h3>
             <p class="mb-4 text-xs text-bodydark2">Now is your turn</p>
-            <a
-                href="#buy-now"
+            <Link
+                :href="route('tickets.new')"
                 rel="nofollow"
                 v-on:click.prevent="buyNowAction"
                 class="flex items-center justify-center rounded-md bg-primary p-2 font-medium text-white hover:bg-opacity-90"
             >
                 Take your ticket
-            </a>
+            </Link>
         </div>
       <!-- Promo Box -->
     </div>
