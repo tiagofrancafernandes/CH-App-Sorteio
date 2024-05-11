@@ -14,6 +14,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'force_https' => (bool) env('APP_FORCE_HTTPS', true),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

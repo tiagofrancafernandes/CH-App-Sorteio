@@ -6225,8 +6225,8 @@
             "version": "dev-master",
             "dist": {
                 "type": "path",
-                "url": "./packages/local/vuejs-component-from-svg",
-                "reference": "d231c97b787722951268a3e19e786acc5377e8d2"
+                "url": "./packages/keep/vuejs-component-from-svg",
+                "reference": "b96fe17d74d74d61e61d85cbec02ca1dd20c737c"
             },
             "require": {
                 "illuminate/support": "^9.0|>=10.0",
