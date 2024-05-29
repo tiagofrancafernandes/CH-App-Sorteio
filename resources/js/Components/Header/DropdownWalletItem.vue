@@ -1,6 +1,6 @@
 <script setup lang="js">
 import { onClickOutside } from '@vueuse/core'
-import { ref, defineProps, watch, computed, nextTick } from 'vue'
+import { ref, watch, computed, nextTick } from 'vue'
 import OpenedEyeIcon from '@/Components/icons/svg-icons/heroicons/OEye.vue'
 import ClosedEyeIcon from '@/Components/icons/svg-icons/heroicons/OEyeSlash.vue'
 import * as StringHelper from '@/Helpers/string/index';

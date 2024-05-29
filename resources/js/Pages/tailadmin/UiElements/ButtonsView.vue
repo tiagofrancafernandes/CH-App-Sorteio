@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import BreadcrumbDefault from '@/Components/Breadcrumbs/BreadcrumbDefault.vue'
 import ButtonDefault from '@/Components/Buttons/ButtonDefault.vue'
 import ButtonsCard from '@/Components/Buttons/ButtonsCard.vue'
 import TailAdminLayout from '@/Layouts/TailAdminLayout.vue'
@@ -11,9 +10,6 @@ const pageTitle = ref('Buttons')
 
 <template>
   <TailAdminLayout>
-    <!-- Breadcrumb Start -->
-    <BreadcrumbDefault :pageTitle="pageTitle" />
-    <!-- Breadcrumb End -->
 
     <ButtonsCard cardTitle="Normal Button">
       <div class="mb-7.5 flex flex-wrap gap-5 xl:gap-20">

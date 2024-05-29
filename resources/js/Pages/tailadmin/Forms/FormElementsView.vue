@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import BreadcrumbDefault from '@/Components/Breadcrumbs/BreadcrumbDefault.vue'
 import CheckboxFive from '@/Components/Forms/Checkboxes/CheckboxFive.vue'
 import CheckboxFour from '@/Components/Forms/Checkboxes/CheckboxFour.vue'
 import CheckboxOne from '@/Components/Forms/Checkboxes/CheckboxOne.vue'
@@ -23,9 +22,6 @@ const pageTitle = ref('Form Elements')
 
 <template>
   <TailAdminLayout>
-    <!-- Breadcrumb Start -->
-    <BreadcrumbDefault :pageTitle="pageTitle" />
-    <!-- Breadcrumb End -->
 
     <!-- ====== Form Elements Section Start -->
     <div class="grid grid-cols-1 gap-9 sm:grid-cols-2">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onClickOutside } from '@vueuse/core'
-import { ref,computed } from 'vue'
+import { ref, computed } from 'vue'
 import WalletIcon from '@/Components/icons/svg-icons/carbon-icons/Wallet.vue';
 import DropdownWalletItem from '@resources/js/Components/Header/DropdownWalletItem.vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
