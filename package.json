@@ -1,6 +1,6 @@
 {
     "private": true,
-    "type": "commonjs",
+    "type": "module",
     "scripts": {
         "start": "vite",
         "dev": "vite",
@@ -31,7 +31,7 @@
         "eslint-plugin-vue": "^9.17.0",
         "flatpickr": "^4.6.13",
         "jsvectormap": "^1.5.3",
-        "laravel-vite-plugin": "^1.0",
+        "laravel-vite-plugin": "^1.0.4",
         "npm-run-all2": "^6.1.1",
         "pinia": "^2.1.7",
         "postcss": "^8.4.38",
@@ -43,5 +43,8 @@
         "vue-router": "^4.2.5",
         "vue-tsc": "^1.8.25",
         "vue3-apexcharts": "^1.4.4"
+    },
+    "dependencies": {
+        "radash": "^12.1.0"
     }
 }

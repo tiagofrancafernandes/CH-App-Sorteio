@@ -41,8 +41,18 @@ let showAdvancedFilter = ref(true);
 
 const setPreFilter = (type = null) => preFilter.value = type;
 let selectedPriceItemHash = ref(null);
+
+const removeSelectedPriceItem = () => {
+    selectedPriceItemHash.value = '';
+}
+
 const setSelectedPriceItem = (priceItem = null) => {
     if (!priceItem) {
+        return;
+    }
+
+    if (selectedPriceItemHash.value && selectedPriceItemHash.value === priceItem?.hash) {
+        removeSelectedPriceItem();
         return;
     }
 
@@ -170,6 +180,10 @@ let computedPriceList = computed(() => {
     return (props?.ticketGroupList?.filtered[`${preFilter?.value}`] ?? []);
 })
 
+const filterCardColSpan = [
+    'col-span-4 sm:col-span-2 md:col-span-2 xl:col-span-1 mb-2 lg:mb-3',
+]
+
 </script>
 
 <template>
@@ -222,7 +236,7 @@ let computedPriceList = computed(() => {
             </div>
 
             <div class="mt-4 max-w-7xl mx-auto p-4">
-                <div class="grid md:grid-cols-12 sm:grid-cols-1 gap-1 lg:gap-2">
+                <div class="grid grid-cols-12 gap-1 lg:gap-2">
                     <Card
                         id="advanced-filter"
                         titleIsHtml
@@ -237,14 +251,21 @@ let computedPriceList = computed(() => {
 
                         <template #title>
                             <div class="grid grid-cols-6">
-                                <div class="col-span-4">
-                                    <h2 class="mt-0 mb-2 text-md text-center font-semibold text-gray-900 dark:text-white">Advanced filter</h2>
+                                <div class="col-span-6 md:col-span-4">
+                                    <h2
+                                        class="mt-0 mb-2 text-md text-center font-semibold text-gray-900 dark:text-white"
+                                    >Advanced filter</h2>
                                 </div>
 
-                                <div class="col-span-2 text-right mr-1 mt-1">
-                                    <button @click="showAdvancedFilter = !showAdvancedFilter" class="bg-blue-500 text-white px-4 py-2 rounded">
-                                        {{ showAdvancedFilter ? 'Hide' : 'Show' }} advanced filter
-                                    </button>
+                                <div
+                                    class="col-span-6 md:col-span-2 text-right mr-1 mt-1"
+                                >
+                                    <div class="flex items-center justify-end">
+                                        <button
+                                            @click="showAdvancedFilter = !showAdvancedFilter" class="bg-blue-500 text-white px-4 py-2 rounded">
+                                            {{ showAdvancedFilter ? 'Hide' : 'Show' }} advanced filter
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </template>
@@ -299,148 +320,159 @@ let computedPriceList = computed(() => {
                     </Card>
 
                     <div
-                        class="col-span-12 grid grid-cols-4 gap-4 justify-center"
+                        class="col-span-12"
                     >
-                        <h2 class="text-gray-100 col-span-6">Sort by: {{preFilter}}</h2>
+                        <div class="grid grid-cols-4 gap-4 gap-y-3 justify-center">
+                            <div class="col-span-4">
+                                <h2 class="text-gray-100">Sort by: {{preFilter}}</h2>
+                            </div>
 
-                        <Card
-                            titleClass="text-center"
-                            class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
-                            :class="{
-                                'shadow shadow-red-400': preFilter == 'morePrize'
-                            }"
-                            @click="setPreFilter('morePrize')"
-                        >
-                            <template #headerIcon>
-                                <ArrowUp
-                                    class="text-red-500"
-                                    size="md"
-                                />
-                                <CurrencyDollar
-                                    class="text-red-500"
-                                    size="lg"
-                                />
-                            </template>
+                            <div :class="filterCardColSpan">
+                                <Card
+                                    titleClass="text-center"
+                                    class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
+                                    :class="{
+                                        'shadow shadow-red-400': preFilter == 'morePrize'
+                                    }"
+                                    @click="setPreFilter('morePrize')"
+                                >
+                                    <template #headerIcon>
+                                        <ArrowUp
+                                            class="text-red-500"
+                                            size="md"
+                                        />
+                                        <CurrencyDollar
+                                            class="text-red-500"
+                                            size="lg"
+                                        />
+                                    </template>
 
-                            <template #title>
-                                Highest prizes
-                            </template>
+                                    <template #title>
+                                        Highest prizes
+                                    </template>
 
-                            <template #body>
-                                <div class="text-justify mt-4 p-1">
-                                    <p><strong>Itens com maiores prêmios.</strong></p>
-                                    <p>Normalmente esses itens com maiores pagamentos, tem grande concorrência, ou seja, tem mior quantidade de pessoas concorrendo pelo prêmio.</p>
-                                    <p>Uma sugestão seria que busque itens com maiores prêmios mas que tenha também menos concorrencia assim aumentam suas chances ;-).</p>
-                                </div>
-                            </template>
-                        </Card>
+                                    <template #body>
+                                        <div class="text-justify mt-4 p-1">
+                                            <p><strong>Itens com maiores prêmios.</strong></p>
+                                            <p>Normalmente esses itens com maiores pagamentos, tem grande concorrência, ou seja, tem mior quantidade de pessoas concorrendo pelo prêmio.</p>
+                                            <p>Uma sugestão seria que busque itens com maiores prêmios mas que tenha também menos concorrencia assim aumentam suas chances ;-).</p>
+                                        </div>
+                                    </template>
+                                </Card>
+                            </div>
 
-                        <Card
-                            titleClass="text-center"
-                            class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
-                            :class="{
-                                'shadow shadow-red-400': preFilter == 'highChance'
-                            }"
-                            @click="setPreFilter('highChance')"
-                        >
-                            <template #headerIcon>
-                                <ArrowUp
-                                    class="text-red-500"
-                                    size="sm"
-                                />
-                                <PercentageFilled
-                                    class="text-red-500"
-                                    size="md"
-                                />
-                            </template>
+                            <div :class="filterCardColSpan">
+                                <Card
+                                    titleClass="text-center"
+                                    class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
+                                    :class="{
+                                        'shadow shadow-red-400': preFilter == 'highChance'
+                                    }"
+                                    @click="setPreFilter('highChance')"
+                                >
+                                    <template #headerIcon>
+                                        <ArrowUp
+                                            class="text-red-500"
+                                            size="sm"
+                                        />
+                                        <PercentageFilled
+                                            class="text-red-500"
+                                            size="md"
+                                        />
+                                    </template>
 
-                            <template #title>
-                                High chance
-                            </template>
+                                    <template #title>
+                                        High chance
+                                    </template>
 
-                            <template #body>
-                                <div class="text-justify mt-4 p-1">
-                                    <p><strong>Maiores chances</strong></p>
-                                    <p>Esses itens possuem por característica uma menor quantidade de pessoas concorrendo entre si pelo prêmio, aumentando assim suas chances de ganhar.</p>
-                                    <p>Como tem menos pessoas, o prêmio tende a ser menor. Se fosse te dar uma sugestão seria que tente ver uma junção de "maior chance" e "maior prêmio".</p>
-                                </div>
-                            </template>
-                        </Card>
+                                    <template #body>
+                                        <div class="text-justify mt-4 p-1">
+                                            <p><strong>Maiores chances</strong></p>
+                                            <p>Esses itens possuem por característica uma menor quantidade de pessoas concorrendo entre si pelo prêmio, aumentando assim suas chances de ganhar.</p>
+                                            <p>Como tem menos pessoas, o prêmio tende a ser menor. Se fosse te dar uma sugestão seria que tente ver uma junção de "maior chance" e "maior prêmio".</p>
+                                        </div>
+                                    </template>
+                                </Card>
+                            </div>
 
-                        <Card
-                            titleClass="text-center"
-                            class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
-                            :class="{
-                                'shadow shadow-red-400': preFilter == 'highChanceAndMorePrize'
-                            }"
-                            @click="setPreFilter('highChanceAndMorePrize')"
-                        >
-                            <template #headerIcon>
-                                <CurrencyDollar
-                                    class="text-red-500"
-                                    size="md"
-                                />
+                            <div :class="filterCardColSpan">
+                                <Card
+                                    titleClass="text-center"
+                                    class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
+                                    :class="{
+                                        'shadow shadow-red-400': preFilter == 'highChanceAndMorePrize'
+                                    }"
+                                    @click="setPreFilter('highChanceAndMorePrize')"
+                                >
+                                    <template #headerIcon>
+                                        <CurrencyDollar
+                                            class="text-red-500"
+                                            size="md"
+                                        />
 
-                                <MPlus
-                                    class="text-red-500"
-                                    size="sm"
-                                />
+                                        <MPlus
+                                            class="text-red-500"
+                                            size="sm"
+                                        />
 
-                                <PercentageFilled
-                                    class="text-red-500"
-                                    size="md"
-                                />
-                            </template>
+                                        <PercentageFilled
+                                            class="text-red-500"
+                                            size="md"
+                                        />
+                                    </template>
 
-                            <template #title>
-                                Highest prizes with high chances
-                            </template>
+                                    <template #title>
+                                        Highest prizes with high chances
+                                    </template>
 
-                            <template #body>
-                                <div class="text-justify mt-4 p-1">
-                                    <p><strong>Maiores prêmios com maiores chances de ganhar</strong>.</p>
-                                    <p>Aqui ordenaremos de forma a te apresentar primeiro os itens com maiores prêmios porém com menos participantes.</p>
-                                    <p>Menos participantes siginica <strong>mais chances de ganhar</strong>.</p>
-                                </div>
-                            </template>
-                        </Card>
+                                    <template #body>
+                                        <div class="text-justify mt-4 p-1">
+                                            <p><strong>Maiores prêmios com maiores chances de ganhar</strong>.</p>
+                                            <p>Aqui ordenaremos de forma a te apresentar primeiro os itens com maiores prêmios porém com menos participantes.</p>
+                                            <p>Menos participantes siginica <strong>mais chances de ganhar</strong>.</p>
+                                        </div>
+                                    </template>
+                                </Card>
+                            </div>
 
-                        <Card
-                            titleClass="text-center"
-                            class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
-                            :class="{
-                                'shadow shadow-red-400': preFilter == 'lessCompetition'
-                            }"
-                            @click="setPreFilter('lessCompetition')"
-                        >
-                            <template #headerIcon>
-                                <ArrowDown
-                                    class="text-red-500"
-                                    size="md"
-                                />
-                                <UserGroup
-                                    class="text-red-500"
-                                    size="lg"
-                                />
-                            </template>
+                            <div :class="filterCardColSpan">
+                                <Card
+                                    titleClass="text-center"
+                                    class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
+                                    :class="{
+                                        'shadow shadow-red-400': preFilter == 'lessCompetition'
+                                    }"
+                                    @click="setPreFilter('lessCompetition')"
+                                >
+                                    <template #headerIcon>
+                                        <ArrowDown
+                                            class="text-red-500"
+                                            size="md"
+                                        />
+                                        <UserGroup
+                                            class="text-red-500"
+                                            size="lg"
+                                        />
+                                    </template>
 
-                            <template #title>
-                                Less competition
-                            </template>
+                                    <template #title>
+                                        Less competition
+                                    </template>
 
-                            <template #body>
-                                <div class="text-justify mt-4 p-1">
-                                    <p><strong>Menos concorrência</strong>.</p>
-                                    <p>Aqui ordenaremos de forma a te apresentar primeiro os itens com menor número de participantes.</p>
-                                    <p>Menos participantes siginifica <strong>mais chances de ganhar</strong>.</p>
-                                </div>
-                            </template>
-                        </Card>
+                                    <template #body>
+                                        <div class="text-justify mt-4 p-1">
+                                            <p><strong>Menos concorrência</strong>.</p>
+                                            <p>Aqui ordenaremos de forma a te apresentar primeiro os itens com menor número de participantes.</p>
+                                            <p>Menos participantes siginifica <strong>mais chances de ganhar</strong>.</p>
+                                        </div>
+                                    </template>
+                                </Card>
+                            </div>
+                        </div>
                     </div>
-
                 </div>
 
-                <div class="grid grid-cols-12 md:grid-cols-12 sm:grid-cols-12 gap-1 lg:gap-4">
+                <div class="grid grid-cols-12 md:grid-cols-12 sm:grid-cols-12 gap-3 lg:gap-4">
                     <div class="col-span-12 mt-4 pt-4 mb-2">
                         <h2 class="text-lg text-gray-100 w-full">
                             Opções de valores
@@ -452,13 +484,14 @@ let computedPriceList = computed(() => {
                         :key="priceItem_index"
                     >
                         <Card
-                            colSpan="1"
+                            colSpan="col-span-12 sm:col-span-6 md:col-span-4 xl:col-span-3"
                             titleClass="text-center"
                             class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
                             :class="{
                                 'shadow shadow-red-400': selectedPriceItemHash && selectedPriceItemHash == priceItem?.hash
                             }"
                             @click="setSelectedPriceItem(priceItem)"
+                            v-bind:data-for-name="'priceItem'"
                         >
                             <template #title>
                                 R$ {{ priceItem.amountStr }}
@@ -541,6 +574,31 @@ let computedPriceList = computed(() => {
                 </div>
             </div>
         </div>
+    </div>
+
+    <div
+        v-show="selectedPriceItemHash"
+        id="drawer-bottom-example"
+        class="fixed bottom-0 left-0 right-0 z-40 w-full p-4 overflow-y-auto transition-transform bg-white dark:bg-gray-800 transform-none" tabindex="-1" aria-labelledby="drawer-bottom-label" aria-modal="true" role="dialog">
+        <h5 id="drawer-bottom-label" class="inline-flex items-center mb-4 text-base font-semibold text-gray-500 dark:text-gray-400"><svg class="w-4 h-4 me-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"></path>
+        </svg>Bottom drawer</h5>
+            <button type="button" data-drawer-hide="drawer-bottom-example" aria-controls="drawer-bottom-example" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 absolute top-2.5 end-2.5 inline-flex items-center justify-center dark:hover:bg-gray-600 dark:hover:text-white">
+            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"></path>
+            </svg>
+            <span class="sr-only">Close menu</span>
+        </button>
+            <p class="max-w-lg mb-6 text-sm text-gray-500 dark:text-gray-400">Supercharge your hiring by taking advantage of our <a href="#" class="text-blue-600 underline font-medium dark:text-blue-500 hover:no-underline">limited-time sale</a> for Flowbite Docs + Job Board. Unlimited access to over 190K top-ranked candidates and the #1 design job board.</p>
+        <a href="#" class="px-4 py-2 me-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">Learn more</a>
+        <a href="#" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">Get access <svg class="rtl:rotate-180 w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"></path>
+        </svg></a>
+
+        <button
+            type="button"
+            @click="removeSelectedPriceItem"
+            class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 mx-2">Cancel</button>
     </div>
 </template>
 

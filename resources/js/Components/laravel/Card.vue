@@ -19,7 +19,27 @@ const tagType = computed(() => [
     'section',
 ].includes(props?.tag) ? props?.tag : 'div');
 
-const colspan = computed(() => props?.colSpan && props?.colSpan >= 1 && props?.colSpan <= 12 ? `col-span-${props?.colSpan}` : '');
+const colspan = computed(() => {
+    let propsColspan = props?.colSpan;
+
+    if (!['string', 'number', 'object'].includes(typeof propsColspan)) {
+        return '';
+    }
+
+    if (typeof propsColspan === 'object') {
+        return propsColspan;
+    }
+
+    if (!isNaN(propsColspan)) {
+        return props?.colSpan >= 1 && props?.colSpan <= 12 ? `col-span-${props?.colSpan}` : '';
+    }
+
+    if (typeof propsColspan === 'string') {
+        return propsColspan.trim();
+    }
+
+    return '';
+});
 
 </script>
 
