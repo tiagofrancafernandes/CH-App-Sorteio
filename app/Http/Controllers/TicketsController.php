@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Application;
+use App\Models\User;
 
 class TicketsController extends Controller
 {
@@ -19,6 +20,11 @@ class TicketsController extends Controller
      */
     public function new(Request $request): \Inertia\Response
     {
+        /**
+         * @var ?User $user
+         */
+        $user = auth()->user();
+
         return Inertia::render('Tickets/NewTicket', [
             'query' => $request->query(),
             'canLogin' => Route::has('login'),
@@ -26,6 +32,7 @@ class TicketsController extends Controller
             'laravelVersion' => Application::VERSION,
             'phpVersion' => PHP_VERSION,
             'ticketGroupList' => static::getGroupList($request),
+            'userWalletList' => $user?->walletList,
         ]);
     }
 

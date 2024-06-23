@@ -5,6 +5,7 @@ import './assets/css/style.css'
 import 'jsvectormap/dist/css/jsvectormap.min.css'
 import 'flatpickr/dist/flatpickr.min.css'
 
+import GlobalComponentsAndMethods from '@/extra/plugins/GlobalComponentsAndMethods';
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -14,9 +15,11 @@ import { Link } from '@inertiajs/vue3';
 import VueApexCharts from 'vue3-apexcharts'
 import AppExtra from '@/extra/plugins/AppExtra';
 
+import * as ObjectHelpers from '@/Helpers/object/object-helpers';
 import * as StringHelper from '@/Helpers/string/index';
 
 globalThis.StringHelper = StringHelper;
+globalThis.ObjectHelpers = ObjectHelpers;
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -27,6 +30,7 @@ createInertiaApp({
         return createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(AppExtra)
+            .use(GlobalComponentsAndMethods)
             .use(createPinia())
             .use(VueApexCharts)
             .use(ZiggyVue)

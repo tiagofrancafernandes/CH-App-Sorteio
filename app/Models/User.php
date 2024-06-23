@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Database\Seeders\FakeHelpers\FakeWalletHelpers;
 
 class User extends Authenticatable
 {
@@ -76,5 +77,31 @@ class User extends Authenticatable
         $this->active_wallet = $walletId;
 
         return boolval($this->save());
+    }
+
+    public function getWalletListAttribute()
+    {
+        return $this->getWalletList($this);
+    }
+
+    public static function getWalletList(User $user, ?string $currency = null) // WIP
+    {
+        // TODO criar wallets de verdade
+
+        $currencies = FakeWalletHelpers::currencies();
+
+        return cache()->remember(
+            implode(',', ['wallet_list', 'user', $user?->id, $currency]),
+            60,
+            fn () => collect(
+                array_merge(array_values($currencies), array_values($currencies)) // TODO
+            )
+                ->map(
+                    fn ($c) => FakeWalletHelpers::fakeWallet(
+                        1,
+                        ['currency' => $c]
+                    )->first()
+                )
+        );
     }
 }

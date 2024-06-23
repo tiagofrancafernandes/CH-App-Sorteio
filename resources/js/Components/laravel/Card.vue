@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
 const tagType = computed(() => [
     'a',
     'div',
+    'button',
     'section',
 ].includes(props?.tag) ? props?.tag : 'div');
 
@@ -70,14 +71,14 @@ const colspan = computed(() => {
                             <div
                                 :class="$slots.headerIcon ? 'col-span-5' : 'col-span-6'"
                             >
-
                                 <h2
                                     v-if="!titleIsHtml"
-                                    class="text-lg font-semibold text-gray-900 dark:text-white"
+                                    class="text-lg font-semibold text-base text-gray-500 dark:text-gray-200"
                                     :class="titleClass"
                                 >
                                     <slot name="title"></slot>
                                 </h2>
+
                                 <slot
                                     v-else
                                     name="title"

@@ -1,9 +1,13 @@
 <script setup lang="js">
 import { Head, Link } from '@inertiajs/vue3';
-import { generateRandomString } from '@/Helpers/string/index'
+import { generateRandomString } from '@/Helpers/string/index';
+import { useSelectedTicket } from '@/stores/selectedTicketStore';
+import * as ObjectHelpers from '@/Helpers/object/object-helpers';
+import { dataGet } from '@/Helpers/object/object-helpers';
+
 import CustomSelect from '@/Components/custom-html/CustomSelect.vue'
 import Card from '@/Components/laravel/Card.vue'
-
+import ModalBottomDrawer from '@/Components/Modals/ModalBottomDrawer.vue';
 import UserIcon from '@/Components/icons/svg-icons/heroicons/MUser.vue'
 import MPlus from '@/Components/icons/svg-icons/heroicons/MPlus.vue'
 import UserGroup from '@/Components/icons/svg-icons/heroicons/MUserGroup.vue'
@@ -14,10 +18,13 @@ import ArrowUpRight from '@resources/js/Components/icons/svg-icons/carbon-icons/
 import ArrowUp from '@resources/js/Components/icons/svg-icons/carbon-icons/ArrowUp.vue'
 import ArrowDown from '@resources/js/Components/icons/svg-icons/carbon-icons/ArrowDown.vue'
 import Filter from '@resources/js/Components/icons/svg-icons/carbon-icons/Filter.vue'
-import { computed, ref } from 'vue';
+import { computed, ref, onBeforeMount } from 'vue';
 
 const props = defineProps({
     ticketGroupList: {
+        type: Object,
+    },
+    userWalletList: {
         type: Object,
     },
     canLogin: {
@@ -30,20 +37,80 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    pageTitle: {
+        type: String,
+    },
+    pageSubtitle: {
+        type: String,
+    },
     phpVersion: {
         type: String,
         required: true,
     },
 });
 
-let preFilter = ref(null);
-let showAdvancedFilter = ref(true);
+let {
+    selectedTicketBuildQuery,
+    selectedTicketCurrency,
+    removeSelectedTicketBuildQuery,
+    setSelectedTicketBuildQuery,
+    setSelectedTicketCurrency,
+    removeSelectedTicketCurrency,
+    setSelectedTicket,
+    clearTicketAllSelections,
+    sortTicketsBy,
+    setSortTicketsBy,
+    removeSortTicketsBy,
+} = useSelectedTicket();
 
-const setPreFilter = (type = null) => preFilter.value = type;
+let sortBy = ref(sortTicketsBy || null);
+let preFilter = ref(sortBy.value || null);
+let showAdvancedFilter = ref(true);
+let showOrderDetail = ref(false);
+let showRefreshWalletListButton = ref(true);
+
+const setPreFilter = (type = null) => {
+    preFilter.value = type;
+
+    if (!type) {
+        removeSortTicketsBy();
+        return;
+    }
+
+    setSortTicketsBy(type);
+};
+
 let selectedPriceItemHash = ref(null);
+let selectedPriceItem = ref(null);
+let loadingWalletList = ref(false);
+
+let userWalletList = ref(props?.userWalletList || []);
+const walletsForCurrency = computed(() => {
+    let walletList = userWalletList.value;
+    let currencyToFilter = dataGet(selectedPriceItem.value ?? {}, 'currency');
+    console.log('currencyToFilter', currencyToFilter, selectedPriceItem.value);
+    walletList = Array.isArray(userWalletList.value) ? walletList : [];
+
+    if (!currencyToFilter) {
+        return [];
+    }
+
+    return ObjectHelpers.filterWhere(
+        walletList,
+        'currency.code',
+        'ilike',
+        currencyToFilter
+    );
+});
 
 const removeSelectedPriceItem = () => {
+    selectedPriceItem.value = null;
     selectedPriceItemHash.value = '';
+}
+
+const closingHandle = (eventData) => {
+    console.log('closingHandle', eventData);
+    removeSelectedPriceItem();
 }
 
 const setSelectedPriceItem = (priceItem = null) => {
@@ -53,14 +120,35 @@ const setSelectedPriceItem = (priceItem = null) => {
 
     if (selectedPriceItemHash.value && selectedPriceItemHash.value === priceItem?.hash) {
         removeSelectedPriceItem();
+        clearTicketAllSelections();
         return;
     }
 
+    setSelectedTicketBuildQuery(priceItem?.buildQuery);
+    setSelectedTicketCurrency(priceItem.currency);
+
+    selectedPriceItem.value = priceItem;
+
     let data = JSON.parse(JSON.stringify(priceItem));
     selectedPriceItemHash.value = priceItem?.hash;
-
-    console.log('priceItem', data, data?.hash, )
 };
+
+const getItemFromTicketGroupListBy = (compareKey, value) => {
+    props?.ticketGroupList?.find(item => item && item[compareKey] === value)
+}
+
+onBeforeMount(() => {
+    let selectedFromStore = ObjectHelpers.findWhere(
+        props?.ticketGroupList?.all,
+        'buildQuery',
+        '==',
+        selectedTicketBuildQuery
+    );
+
+    if (!selectedPriceItem.value && selectedFromStore) {
+        setSelectedPriceItem(selectedFromStore);
+    }
+});
 
 let probabilityOptions = {
     label: 'probability',
@@ -184,10 +272,68 @@ const filterCardColSpan = [
     'col-span-4 sm:col-span-2 md:col-span-2 xl:col-span-1 mb-2 lg:mb-3',
 ]
 
+const refreshWalletList = async () => {
+    loadingWalletList.value = true;
+    showRefreshWalletListButton.value = false;
+    setTimeout(() => {
+        showRefreshWalletListButton.value = true;
+    }, 5000);
+
+    let requestBody = ({
+        //
+    });
+
+    fetch(
+        route('api.wallet.list'),
+        {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        }
+    )
+        ?.then(response => {
+            if (!response || !response.ok) {
+                console.log('Error', response);
+                return null;
+            }
+
+            return response?.json();
+        })
+        ?.then(data => {
+            loadingWalletList.value = false;
+
+            if (!data || typeof data !== 'object' || data?.success === false) {
+                throw `Fail on get wallet list`;
+            }
+
+            let walletsFromResponse = dataGet(data, 'wallets');
+
+            if (!walletsFromResponse || !Array.isArray(walletsFromResponse)) {
+                return;
+            }
+
+            userWalletList.value = walletsFromResponse;
+
+            console.log('wallets', Array.isArray(walletsFromResponse), walletsFromResponse,);
+        })
+        ?.catch(error => {
+            loadingWalletList.value = false;
+            console.error(error);
+        })
+        ?.finally(() => {
+            loadingWalletList.value = false;
+        });
+}
+
+const pageTitle = computed(() => props?.pageTitle || 'Buy new ticket');
+const pageSubtitle = computed(() => props?.pageSubtitle || '');
 </script>
 
 <template>
-    <Head title="Welcome" />
+    <Head :title="pageTitle" />
 
     <div
         class="relative sm:flex sm:justify-center sm:items-center min-h-screen bg-dots-darker bg-center bg-gray-100 dark:bg-dots-lighter dark:bg-gray-900 selection:bg-red-500 selection:text-white"
@@ -201,22 +347,19 @@ const filterCardColSpan = [
                 v-if="$page.props.auth.user"
                 :href="route('dashboard')"
                 class="font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                >Dashboard</Link
-            >
+            >Dashboard</Link>
 
             <template v-else>
                 <Link
                     :href="route('login')"
                     class="font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                    >Log in</Link
-                >
+                >Log in</Link>
 
                 <Link
                     v-if="canRegister"
                     :href="route('register')"
                     class="ml-4 font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                    >Register</Link
-                >
+                >Register</Link>
             </template>
         </div>
 
@@ -327,6 +470,13 @@ const filterCardColSpan = [
                                 <h2 class="text-gray-100">Sort by: {{preFilter}}</h2>
                             </div>
 
+                            <div class="col-span-4">
+                                <button
+                                    type="button"
+                                    @click="showOrderDetail = !showOrderDetail"
+                                >Show/hide sort detail</button>
+                            </div>
+
                             <div :class="filterCardColSpan">
                                 <Card
                                     titleClass="text-center"
@@ -352,7 +502,10 @@ const filterCardColSpan = [
                                     </template>
 
                                     <template #body>
-                                        <div class="text-justify mt-4 p-1">
+                                        <div
+                                            class="text-justify mt-4 p-1"
+                                            v-show="showOrderDetail"
+                                        >
                                             <p><strong>Itens com maiores prêmios.</strong></p>
                                             <p>Normalmente esses itens com maiores pagamentos, tem grande concorrência, ou seja, tem mior quantidade de pessoas concorrendo pelo prêmio.</p>
                                             <p>Uma sugestão seria que busque itens com maiores prêmios mas que tenha também menos concorrencia assim aumentam suas chances ;-).</p>
@@ -386,7 +539,10 @@ const filterCardColSpan = [
                                     </template>
 
                                     <template #body>
-                                        <div class="text-justify mt-4 p-1">
+                                        <div
+                                            class="text-justify mt-4 p-1"
+                                            v-show="showOrderDetail"
+                                        >
                                             <p><strong>Maiores chances</strong></p>
                                             <p>Esses itens possuem por característica uma menor quantidade de pessoas concorrendo entre si pelo prêmio, aumentando assim suas chances de ganhar.</p>
                                             <p>Como tem menos pessoas, o prêmio tende a ser menor. Se fosse te dar uma sugestão seria que tente ver uma junção de "maior chance" e "maior prêmio".</p>
@@ -426,7 +582,10 @@ const filterCardColSpan = [
                                     </template>
 
                                     <template #body>
-                                        <div class="text-justify mt-4 p-1">
+                                        <div
+                                            class="text-justify mt-4 p-1"
+                                            v-show="showOrderDetail"
+                                        >
                                             <p><strong>Maiores prêmios com maiores chances de ganhar</strong>.</p>
                                             <p>Aqui ordenaremos de forma a te apresentar primeiro os itens com maiores prêmios porém com menos participantes.</p>
                                             <p>Menos participantes siginica <strong>mais chances de ganhar</strong>.</p>
@@ -460,7 +619,10 @@ const filterCardColSpan = [
                                     </template>
 
                                     <template #body>
-                                        <div class="text-justify mt-4 p-1">
+                                        <div
+                                            class="text-justify mt-4 p-1"
+                                            v-show="showOrderDetail"
+                                        >
                                             <p><strong>Menos concorrência</strong>.</p>
                                             <p>Aqui ordenaremos de forma a te apresentar primeiro os itens com menor número de participantes.</p>
                                             <p>Menos participantes siginifica <strong>mais chances de ganhar</strong>.</p>
@@ -475,7 +637,7 @@ const filterCardColSpan = [
                 <div class="grid grid-cols-12 md:grid-cols-12 sm:grid-cols-12 gap-3 lg:gap-4">
                     <div class="col-span-12 mt-4 pt-4 mb-2">
                         <h2 class="text-lg text-gray-100 w-full">
-                            Opções de valores
+                            Types and prices
                         </h2>
                     </div>
 
@@ -486,9 +648,10 @@ const filterCardColSpan = [
                         <Card
                             colSpan="col-span-12 sm:col-span-6 md:col-span-4 xl:col-span-3"
                             titleClass="text-center"
-                            class="cursor-pointer motion-safe:hover:scale-110 relative hover:z-40"
+                            class="shadow-md cursor-pointer motion-safe:hover:scale-[1.2] relative hover:z-40"
                             :class="{
-                                'shadow shadow-red-400': selectedPriceItemHash && selectedPriceItemHash == priceItem?.hash
+                                'hover:shadow-gray-400 dark:hover:shadow-gray-600/50': selectedPriceItemHash !== priceItem?.hash,
+                                'shadow shadow-red-400': selectedPriceItemHash === priceItem?.hash,
                             }"
                             @click="setSelectedPriceItem(priceItem)"
                             v-bind:data-for-name="'priceItem'"
@@ -540,7 +703,6 @@ const filterCardColSpan = [
                             </template>
                         </Card>
                     </template>
-
                 </div>
             </div>
 
@@ -576,30 +738,361 @@ const filterCardColSpan = [
         </div>
     </div>
 
-    <div
-        v-show="selectedPriceItemHash"
-        id="drawer-bottom-example"
-        class="fixed bottom-0 left-0 right-0 z-40 w-full p-4 overflow-y-auto transition-transform bg-white dark:bg-gray-800 transform-none" tabindex="-1" aria-labelledby="drawer-bottom-label" aria-modal="true" role="dialog">
-        <h5 id="drawer-bottom-label" class="inline-flex items-center mb-4 text-base font-semibold text-gray-500 dark:text-gray-400"><svg class="w-4 h-4 me-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"></path>
-        </svg>Bottom drawer</h5>
-            <button type="button" data-drawer-hide="drawer-bottom-example" aria-controls="drawer-bottom-example" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 absolute top-2.5 end-2.5 inline-flex items-center justify-center dark:hover:bg-gray-600 dark:hover:text-white">
-            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"></path>
-            </svg>
-            <span class="sr-only">Close menu</span>
-        </button>
-            <p class="max-w-lg mb-6 text-sm text-gray-500 dark:text-gray-400">Supercharge your hiring by taking advantage of our <a href="#" class="text-blue-600 underline font-medium dark:text-blue-500 hover:no-underline">limited-time sale</a> for Flowbite Docs + Job Board. Unlimited access to over 190K top-ranked candidates and the #1 design job board.</p>
-        <a href="#" class="px-4 py-2 me-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">Learn more</a>
-        <a href="#" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">Get access <svg class="rtl:rotate-180 w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"></path>
-        </svg></a>
+    <ModalBottomDrawer
+        :show="selectedPriceItemHash"
+        v-on:closing="closingHandle"
+    >
+        <template v-slot:title>Payment</template>
 
-        <button
-            type="button"
-            @click="removeSelectedPriceItem"
-            class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 mx-2">Cancel</button>
-    </div>
+        <div class="grid grid-cols-12 gap-y-3 gap-x-4">
+            <div class="col-span-2">
+                <template
+                    v-if="selectedPriceItem"
+                >
+                    <div class="w-full">
+                        <h2 class="ml-4 inline-flex items-center text-base text-gray-500 dark:text-gray-400">Selected item</h2>
+                    </div>
+
+                    <Card
+                        titleClass="text-center"
+                        class="mx-4 my-2"
+                    >
+                        <template #title>
+                            R$ {{ selectedPriceItem.amountStr }}
+                        </template>
+
+                        <template #body>
+                            <table
+                                class="w-full"
+                            >
+                                <tbody>
+                                    <tr class="pl-2">
+                                        <th class="text-left">
+                                            <CurrencyDollar
+                                                class="text-red-500"
+                                                size="md"
+                                            />
+                                        </th>
+                                        <td class="text-right">
+                                            {{ selectedPriceItem.prize }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="pl-1">
+                                            <PercentageFilled
+                                                class="text-red-500"
+                                                size="5"
+                                            />
+                                        </th>
+                                        <td class="text-right" >
+                                            {{ Number(selectedPriceItem.probabilityInPercent*100).toFixed(2).replace(/\.?0+$/, '') }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="pl-1">
+                                            <UserGroup
+                                                class="text-red-500"
+                                                size="sm"
+                                            />
+                                        </th>
+                                        <td class="text-right" >
+                                            {{ selectedPriceItem.maximumNumberOfParticipants }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </template>
+                    </Card>
+                </template>
+            </div>
+
+            <div class="col-span-2">
+                <div class="w-full">
+                    <h2 class="ml-4 inline-flex items-center text-base text-gray-500 dark:text-gray-400">Select a wallet</h2>
+                </div>
+
+                <div class="w-full mb-3 px-5 pt-2">
+                    <CustomizableButton
+                        @click="refreshWalletList"
+                        v-bind:disabled="!showRefreshWalletListButton"
+                    >
+                        Refresh
+                        <template v-slot:right>
+                            <svg
+                                class="w-3.5 h-3.5 ms-2"
+                                :class="{
+                                    'animate-spin': loadingWalletList,
+                                }"
+                                fill="currentColor" xmlns="http://www.w3.org/2000/svg" id="mdi-refresh" viewBox="0 0 24 24"
+                            >
+                                <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"></path>
+                            </svg>
+                        </template>
+                    </CustomizableButton>
+                </div>
+
+                <fieldset class="mx-4 my-2">
+                    <legend class="sr-only">Wallets</legend>
+
+                    <template
+                        v-for="(walletData, walletIndex) in walletsForCurrency"
+                        :key="walletIndex"
+                    >
+                        <div class="flex items-center mb-4">
+                            <input
+                                :id="dataGet(walletData, 'uuid')"
+                                :data-currency-code="dataGet(walletData, 'currency.code')"
+                                type="radio"
+                                name="countries"
+                                value="USA"
+                                class="w-4 h-4 border-gray-300 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:focus:bg-blue-600 dark:bg-gray-700 dark:border-gray-600"
+                                checked
+                            >
+                            <label
+                                :for="dataGet(walletData, 'uuid')"
+                                :data-currency-code="dataGet(walletData, 'currency.code')"
+                                class="block ms-2  text-sm font-medium text-gray-900 dark:text-gray-300"
+                            >
+                                {{ dataGet(walletData, 'title') }}
+                                {{ dataGet(walletData, 'currency.code') ? sprintf('(%s)', dataGet(walletData, 'currency.code')) : '' }}
+                            </label>
+                        </div>
+                    </template>
+
+
+                    <!--
+                    <div class="flex items-center">
+                        <input id="option-disabled" type="radio" name="countries" value="China" class="w-4 h-4 border-gray-200 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600" disabled>
+                        <label for="option-disabled" class="block ms-2 text-sm font-medium text-gray-300 dark:text-gray-700">
+                        China (disabled)
+                        </label>
+                    </div>
+                    -->
+                </fieldset>
+            </div>
+
+            <div class="col-span-5 h-48">
+            <!-- overflow-x-auto -->
+                <div class="w-full overflow-y-auto h-72 mb-2">
+                    <div class="relative shadow-md sm:rounded-lg h-48">
+                        <div class="flex flex-column sm:flex-row flex-wrap space-y-4 sm:space-y-0 items-center justify-between pb-4">
+                            <div>
+                                Selected group: <span>Xyz</span> <i>i</i>
+                            </div>
+
+                            <label for="group-table-search" class="sr-only">Search</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 rtl:inset-r-0 rtl:right-0 flex items-center ps-3 pointer-events-none">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
+                                </div>
+                                <input type="text" id="group-table-search" class="block p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search for group">
+                            </div>
+                        </div>
+
+                        <table class="w-full h-48 text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 rounded">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th scope="col" class="p-4">
+                                        <div class="flex items-center">
+                                            <div></div>
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        Group UID
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        Slots
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        Currency
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        Price
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        Action
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody
+                                :class="[
+                                    'rounded',
+                                    'w-full',
+                                    'overflow-y-auto',
+                                    'h-72',
+                                    'bg-white',
+                                    'dark:bg-slate-800',
+                                    'dark:highlight-white/5',
+                                    'shadow-lg',
+                                    'ring-0',
+                                    'ring-black/5',
+                                    // 'flex',
+                                    // 'flex-col',
+                                    // 'divide-y dark:divide-slate-200/5',
+                                ]"
+                            >
+                                <!--
+                                <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    <td colspan="100%" class="w-full p-0 m-0">
+                                        <div class="overflow-y-auto h-72 bg-white dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5 rounded-xl flex flex-col divide-y dark:divide-slate-200/5">
+                                            <div class="flex items-center gap-4 p-4">
+                                                <img class="w-12 h-12 rounded-full" src="https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;fit=facearea&amp;facepad=4&amp;w=256&amp;h=256&amp;q=80">
+                                                <div class="flex flex-col">
+                                                <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">Andrew Alfred</strong>
+                                                <span class="text-slate-500 text-sm font-medium dark:text-slate-400">Technical advisor</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-4 p-4">
+                                                <img class="w-12 h-12 rounded-full" src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;fit=facearea&amp;facepad=4&amp;w=256&amp;h=256&amp;q=80">
+                                                <div class="flex flex-col">
+                                                <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">Debra Houston</strong>
+                                                <span class="text-slate-500 text-sm font-medium dark:text-slate-400">Analyst</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-4 p-4">
+                                                <img class="w-12 h-12 rounded-full" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;fit=facearea&amp;facepad=4&amp;w=256&amp;h=256&amp;q=80">
+                                                <div class="flex flex-col">
+                                                <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">Jane White</strong>
+                                                <span class="text-slate-500 text-sm font-medium dark:text-slate-400">Director, Marketing</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-4 p-4">
+                                                <img class="w-12 h-12 rounded-full" src="https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;fit=facearea&amp;facepad=4&amp;w=256&amp;h=256&amp;q=80">
+                                                <div class="flex flex-col">
+                                                <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">Ray Flint</strong>
+                                                <span class="text-slate-500 text-sm font-medium dark:text-slate-400">Technical Advisor</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                -->
+                                <template
+                                    v-for="(dataItem, dataItemIndex) in 4"
+                                    :key="dataItemIndex"
+                                >
+                                    <tr
+                                        class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                                    >
+                                        <td class="w-4 px-0 py-0">
+                                            <div class="flex items-center px-4 py-0">
+                                                <div></div>
+                                            </div>
+                                        </td>
+                                        <th scope="row" class="px-6 py-0 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                            XXXXX-XXXX
+                                        </th>
+                                        <td class="px-6 py-0">
+                                            3/10
+                                        </td>
+                                        <td class="px-6 py-0">
+                                            BRL
+                                        </td>
+                                        <td class="px-6 py-0">
+                                            $1999
+                                        </td>
+                                        <td class="px-6 py-0">
+                                            <button
+                                                type="button"
+                                                class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                                            >Select</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <!--
+                                <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    <td class="w-4 p-4">
+                                        <div class="flex items-center">
+                                            <input id="checkbox-table-search-2" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                            <label for="checkbox-table-search-2" class="sr-only">checkbox</label>
+                                        </div>
+                                    </td>
+                                    <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                        Microsoft Surface Pro
+                                    </th>
+                                    <td class="px-6 py-4">
+                                        White
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        Laptop PC
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        $1999
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <a href="#" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Edit</a>
+                                    </td>
+                                </tr>
+                                -->
+                            </tbody>
+                        </table>
+
+                        <nav class="flex items-center flex-column flex-wrap md:flex-row justify-between pt-4" aria-label="Table navigation">
+                            <span class="text-sm font-normal text-gray-500 dark:text-gray-400 mb-4 md:mb-0 block w-full md:inline md:w-auto">Showing <span class="font-semibold text-gray-900 dark:text-white">1-10</span> of <span class="font-semibold text-gray-900 dark:text-white">1000</span></span>
+                            <ul class="inline-flex -space-x-px rtl:space-x-reverse text-sm h-8">
+                                <li>
+                                    <a href="#" class="flex items-center justify-center px-3 h-8 ms-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">Previous</a>
+                                </li>
+                                <li>
+                                    <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">1</a>
+                                </li>
+                                <li>
+                                    <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">2</a>
+                                </li>
+                                <li>
+                                    <a href="#" aria-current="page" class="flex items-center justify-center px-3 h-8 text-blue-600 border border-gray-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white">3</a>
+                                </li>
+                                <li>
+                                    <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">4</a>
+                                </li>
+                                <li>
+                                    <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">5</a>
+                                </li>
+                                <li>
+                            <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+
+                <div class="w-full">
+                    <p
+                        class="mb-3 text-sm text-gray-500 dark:text-gray-400"
+                    >If no group is select, a random group will be assigned.</p>
+                </div>
+            </div>
+            <div class="col-span-3"></div>
+
+            <div class="col-span-12 mb-3">
+                <p
+                    class="mb-3 text-sm text-gray-500 dark:text-gray-400"
+                >If no group is select, a random group will be assigned.</p>
+                <p
+                    class="mb-3 text-sm text-gray-500 dark:text-gray-400"
+                >Know more <a href="#" class="text-blue-600 underline font-medium dark:text-blue-500 hover:no-underline">here</a>.</p>
+            </div>
+        </div>
+
+        <template v-slot:footer>
+            <MuttedButton href="#">Learn more</MuttedButton>
+
+            <CustomizableButton>
+                Algo
+                <template v-slot:right>
+                    <svg class="rtl:rotate-180 w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"></path>
+                    </svg>
+                </template>
+            </CustomizableButton>
+            <button
+                type="button"
+                @click="emitClosing"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 mx-2"
+            >Cancel</button>
+            <PrimaryButton>PrimaryButton</PrimaryButton>
+        </template>
+    </ModalBottomDrawer>
 </template>
 
 <style>
