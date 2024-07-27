@@ -69,7 +69,7 @@ const getOrSetStaticValues = (key, valueOnNull) => {
 <template>
 <div
     v-show="showDrawer"
-    class="fixed bottom-0 left-0 right-0 z-40 w-full p-4 overflow-y-auto transition-transform bg-white dark:bg-gray-800 transform-none" tabindex="-1"
+    class="fixed bottom-0 left-0 right-0 z-40 w-full p-4 transition-transform bg-white dark:bg-gray-800 transform-none" tabindex="-1"
     :aria-labelledby="`${drawerId}-label`"
     aria-modal="true" role="dialog"
 >

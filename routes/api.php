@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Validation\ValidationException;
+use App\Http\Controllers\Api\V1\RaffleGroupController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,6 +42,13 @@ Route::match(['get', 'post'], 'wallet/list/{currency?}', [WalletController::clas
         ])
     ?->where('currency', '^([a-zA-Z]{3})$')
         ?->name('api.wallet.list');
+
+Route::match(['get', 'post'], 'raffle_group/list/{currency?}', [RaffleGroupController::class, 'list'])
+        ?->middleware([
+            // 'auth',
+        ])
+    ?->where('currency', '^([a-zA-Z]{3})$')
+        ?->name('api.raffle_group.list');
 
 Route::match(['get', 'post'], 'wallet/{walletId}/balance', [WalletController::class, 'balance'])
         ?->where('wallet', '^[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}$')
