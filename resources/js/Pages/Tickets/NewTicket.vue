@@ -90,7 +90,7 @@ let userWalletList = ref(props?.userWalletList || []);
 
 let loadingRaffleGroupList = ref(false);
 let showRefreshRaffleGroupListButton = ref(true);
-let userRaffleGroupList = ref([]);
+let availableRaffleGroupList = ref([]);
 
 const walletsForCurrency = computed(() => {
     let walletList = userWalletList.value;
@@ -113,6 +113,7 @@ const walletsForCurrency = computed(() => {
 const removeSelectedPriceItem = () => {
     selectedPriceItem.value = null;
     selectedPriceItemHash.value = '';
+    availableRaffleGroupList.value = [];
 }
 
 const closingHandle = (eventData) => {
@@ -135,6 +136,7 @@ const setSelectedPriceItem = (priceItem = null) => {
     setSelectedTicketCurrency(priceItem.currency);
 
     selectedPriceItem.value = priceItem;
+    refreshRaffleGroupList();
 
     let data = JSON.parse(JSON.stringify(priceItem));
     selectedPriceItemHash.value = priceItem?.hash;
@@ -402,7 +404,7 @@ const refreshRaffleGroupList = async () => {
                 return;
             }
 
-            userRaffleGroupList.value = raffleGroupsFromResponse;
+            availableRaffleGroupList.value = raffleGroupsFromResponse;
 
             console.log('RaffleGroups', Array.isArray(raffleGroupsFromResponse), raffleGroupsFromResponse,);
         })
@@ -1025,7 +1027,7 @@ const refreshRaffleGroupList = async () => {
                                 ]"
                             >
                                 <template
-                                    v-for="(dataItem, dataItemIndex) in 10"
+                                    v-for="(dataItem, dataItemIndex) in availableRaffleGroupList"
                                     :key="dataItemIndex"
                                 >
                                     <tr

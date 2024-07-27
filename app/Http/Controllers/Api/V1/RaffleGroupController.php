@@ -31,7 +31,7 @@ class RaffleGroupController extends Controller
                 'slots' => $slots,
                 'page' => $page,
                 'limit' => $limit,
-                'md5_query' => md5($request->query()),
+                'md5_query' => md5(http_build_query($request->query())),
             ]),
             60,
             fn () => collect(FakeRaffleGroupHelpers::fakeRaffleGroup(
