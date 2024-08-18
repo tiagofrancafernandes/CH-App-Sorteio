@@ -3,8 +3,10 @@ import { Head, Link } from '@inertiajs/vue3';
 import { generateRandomString } from '@/Helpers/string/index';
 import { useSelectedTicket } from '@/stores/selectedTicketStore';
 import * as ObjectHelpers from '@/Helpers/object/object-helpers';
+import * as StringHelpers from '@/Libs/Helpers/StringHelpers';
 import { dataGet } from '@/Helpers/object/object-helpers';
 
+import BasicTooltip from '@/Components/Tooltips/BasicTooltip.vue';
 import CustomSelect from '@/Components/custom-html/CustomSelect.vue'
 import Card from '@/Components/laravel/Card.vue'
 import ModalBottomDrawer from '@/Components/Modals/ModalBottomDrawer.vue';
@@ -71,6 +73,10 @@ let preFilter = ref(sortBy.value || null);
 let showAdvancedFilter = ref(true);
 let showOrderDetail = ref(false);
 let showRefreshWalletListButton = ref(true);
+let groupSelectionMode = ref('random_group');
+let selectedGroup = ref(null);
+let showGroupRequestPassModal = ref(false);
+let selectedGroupProtectedPass = ref(null);
 
 const setPreFilter = (type = null) => {
     preFilter.value = type;
@@ -82,6 +88,12 @@ const setPreFilter = (type = null) => {
 
     setSortTicketsBy(type);
 };
+
+let cartCollapsed = ref(false);
+const cartCollapseHandle = (collapsed = null) => {
+    cartCollapsed.value = Boolean(collapsed);
+    console.log('cartCollapseHandle collapsed', cartCollapsed.value);
+}
 
 let selectedPriceItemHash = ref(null);
 let selectedPriceItem = ref(null);
@@ -114,11 +126,37 @@ const removeSelectedPriceItem = () => {
     selectedPriceItem.value = null;
     selectedPriceItemHash.value = '';
     availableRaffleGroupList.value = [];
+    groupSelectionMode.value = 'random_group';
+    selectedGroup.value = null;
+}
+
+const cancelGroupRequestPass = () => {
+    showGroupRequestPassModal.value = false;
+}
+
+const selectGroup = (raffleGroup) => { // WIP
+    console.log('raffleGroup', raffleGroup);
+    selectedGroup.value = raffleGroup;
+    showGroupRequestPassModal.value = Boolean(raffleGroup?.password_required);
+}
+
+const showSelectedItem = computed(() => {
+    return selectedPriceItem.value &&
+    selectedPriceItemHash.value;
+})
+
+const cancelSelectedItem = (event = null) => {
+    removeSelectedPriceItem();
+    console.log(
+        'selectedPriceItem', selectedPriceItem.value,
+        'selectedPriceItemHash', selectedPriceItemHash.value,
+        'availableRaffleGroupList', availableRaffleGroupList.value,
+    );
 }
 
 const closingHandle = (eventData) => {
     console.log('closingHandle', eventData);
-    removeSelectedPriceItem();
+    cancelSelectedItem();
 }
 
 const setSelectedPriceItem = (priceItem = null) => {
@@ -135,7 +173,14 @@ const setSelectedPriceItem = (priceItem = null) => {
     setSelectedTicketBuildQuery(priceItem?.buildQuery);
     setSelectedTicketCurrency(priceItem.currency);
 
-    selectedPriceItem.value = priceItem;
+    let currencyFmt = StringHelpers.asCurrency(priceItem.currency);
+
+    selectedPriceItem.value = {
+        ...priceItem,
+        prize_fmt: currencyFmt && priceItem.prize ? currencyFmt.format(priceItem.prize) : priceItem.prize,
+        amountStr_fmt: currencyFmt && priceItem.amountStr ? currencyFmt.format(priceItem.amountStr) : priceItem.amountStr,
+        admFee_fmt: currencyFmt && priceItem.admFee ? currencyFmt.format(priceItem.admFee) : priceItem.admFee,
+    };
     refreshRaffleGroupList();
 
     let data = JSON.parse(JSON.stringify(priceItem));
@@ -417,6 +462,48 @@ const refreshRaffleGroupList = async () => {
         });
 }
 
+const slotsFormat = (slotsData) => {
+    if (
+        !slotsData
+        || (typeof slotsData !== 'object')
+        || Array.isArray(slotsData)
+    ) {
+        return null;
+    }
+
+    let {freeSlots, slots} = slotsData || {};
+    freeSlots = freeSlots-0;
+    slots = slots-0;
+
+    return [slots - freeSlots, slots].join('/');
+}
+
+const formatMoney = (value, currency) => {
+    value = value -0;
+
+    if (isNaN(value)) {
+        return null;
+    }
+
+    if (!currency || !['string', 'object'].includes(typeof currency)) {
+        return `${value}`;
+    }
+
+    if (typeof currency === 'object') {
+        currency = currency.hasOwnProperty('code') ? currency['code'] : null;
+    }
+
+    if (!currency || typeof currency !== 'string') {
+        return `${value}`;
+    }
+
+    const formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+    });
+
+    return formatter.format(value);
+}
 </script>
 
 <template>
@@ -825,343 +912,538 @@ const refreshRaffleGroupList = async () => {
         </div>
     </div>
 
-    <ModalBottomDrawer
-        :show="selectedPriceItemHash"
-        v-on:closing="closingHandle"
-        class="border-t-[0.05rem] border-gray-500"
-    >
-        <template v-slot:title>Payment</template>
+    <template v-if="showSelectedItem">
+        <ModalBottomDrawer
+            :show="showSelectedItem"
+            v-on:closing="closingHandle"
+            :_showCloseButton="false"
+            :collapseHandle="cartCollapseHandle"
+            :collapsed="cartCollapsed"
+        >
+            <template v-slot:title>Payment</template>
 
-        <div class="grid grid-cols-12 gap-y-3 gap-x-4 place-content-stretch">
-            <div class="col-span-2">
-                <template
-                    v-if="selectedPriceItem"
-                >
-                    <div class="w-full">
-                        <h2 class="ml-4 inline-flex items-center text-base text-gray-500 dark:text-gray-400">Selected item</h2>
-                    </div>
-
-                    <Card
-                        titleClass="text-center"
-                        class="mx-4 my-2"
+            <div
+                :class="[
+                    'grid-cols-12 gap-y-3 gap-x-4 place-content-stretch',
+                    {
+                        grid: !cartCollapsed,
+                        hidden: cartCollapsed,
+                    }
+                ]"
+            >
+                <div class="col-span-2" v-if="false">
+                    <template
+                        v-if="selectedPriceItem"
                     >
-                        <template #title>
-                            R$ {{ selectedPriceItem.amountStr }}
-                        </template>
+                        <div class="w-full">
+                            <h2 class="ml-4 inline-flex items-center text-base text-gray-500 dark:text-gray-400">Selected item</h2>
+                        </div>
 
-                        <template #body>
-                            <table
-                                class="w-full"
-                            >
-                                <tbody>
-                                    <tr class="pl-2">
-                                        <th class="text-left">
-                                            <CurrencyDollar
-                                                class="text-red-500"
-                                                size="md"
-                                            />
-                                        </th>
-                                        <td class="text-right">
-                                            {{ selectedPriceItem.prize }}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th class="pl-1">
-                                            <PercentageFilled
-                                                class="text-red-500"
-                                                size="5"
-                                            />
-                                        </th>
-                                        <td class="text-right" >
-                                            {{ Number(selectedPriceItem.probabilityInPercent*100).toFixed(2).replace(/\.?0+$/, '') }}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th class="pl-1">
-                                            <UserGroup
-                                                class="text-red-500"
-                                                size="sm"
-                                            />
-                                        </th>
-                                        <td class="text-right" >
-                                            {{ selectedPriceItem.maximumNumberOfParticipants }}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </template>
-                    </Card>
-                </template>
-            </div>
+                        <Card
+                            titleClass="text-center"
+                            class="mx-4 my-2"
+                        >
+                            <template #title>
+                                R$ {{ selectedPriceItem?.amountStr }}
+                            </template>
 
-            <div class="col-span-2">
-                <div class="w-full">
-                    <h2 class="ml-4 inline-flex items-center text-base text-gray-500 dark:text-gray-400">Select a wallet</h2>
+                            <template #body>
+                                <table
+                                    class="w-full"
+                                >
+                                    <tbody>
+                                        <tr class="pl-2">
+                                            <th class="text-left">
+                                                <CurrencyDollar
+                                                    class="text-red-500"
+                                                    size="md"
+                                                />
+                                            </th>
+                                            <td class="text-right">
+                                                {{ selectedPriceItem?.prize }}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="pl-1">
+                                                <PercentageFilled
+                                                    class="text-red-500"
+                                                    size="5"
+                                                />
+                                            </th>
+                                            <td class="text-right" >
+                                                {{ Number(selectedPriceItem.probabilityInPercent*100).toFixed(2).replace(/\.?0+$/, '') }}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="pl-1">
+                                                <UserGroup
+                                                    class="text-red-500"
+                                                    size="sm"
+                                                />
+                                            </th>
+                                            <td class="text-right" >
+                                                {{ selectedPriceItem?.maximumNumberOfParticipants }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </template>
+                        </Card>
+                    </template>
                 </div>
 
-                <div class="w-full mb-3 px-5 pt-2">
-                    <CustomizableButton
-                        @click="refreshWalletList"
-                        v-bind:disabled="!showRefreshWalletListButton"
+                <div class="col-span-2">
+                    <div
+                        v-if="selectedPriceItem"
+                        class="mx-auto mt-6 max-w-4xl flex-1 space-y-6 lg:mt-0 lg:w-full"
                     >
-                        Refresh
-                        <template v-slot:right>
-                            <svg
-                                class="w-3.5 h-3.5 ms-2"
-                                :class="{
-                                    'animate-spin': loadingWalletList,
-                                }"
-                                fill="currentColor" xmlns="http://www.w3.org/2000/svg" id="mdi-refresh" viewBox="0 0 24 24"
+                        <div class="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+                            <p class="text-xl font-semibold text-gray-900 dark:text-white">Selected item</p>
+
+                            <div class="space-y-4">
+                                <div class="space-y-2">
+                                    <pre v-if="false">{{ selectedPriceItem }}</pre>
+                                    <dl class="flex items-center justify-between gap-4">
+                                        <dt class="text-base font-normal text-gray-600 dark:text-gray-100">Places</dt>
+                                        <dd class="text-semibold font-medium text-gray-900 dark:text-gray-100">{{ selectedPriceItem?.maximumNumberOfParticipants }}</dd>
+                                    </dl>
+
+                                    <dl class="flex items-center justify-between gap-4">
+                                        <dt class="text-base font-normal text-gray-600 dark:text-gray-100">Probability of winning</dt>
+                                        <dd class="text-semibold font-medium text-gray-900 dark:text-gray-100">{{ Number(selectedPriceItem.probabilityInPercent*100).toFixed(2).replace(/\.?0+$/, '') }}%</dd>
+                                    </dl>
+
+                                    <dl class="flex items-center justify-between gap-4">
+                                        <dt class="text-lg font-normal text-yellow-500 dark:text-yellow-600">Prize</dt>
+                                        <dd class="text-lg font-semibold text-yellow-500 dark:text-yellow-600">{{ selectedPriceItem?.prize_fmt }}</dd>
+                                    </dl>
+                                </div>
+
+                                <dl class="flex items-center justify-between gap-4">
+                                    <dt class="text-xl font-bold text-gray-50 dark:text-gray-50">Price</dt>
+                                    <dd class="text-xl font-bold text-green-600">{{ selectedPriceItem?.amountStr_fmt }}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-5">
+                    <div class="flex mb-3">
+                        <div class="flex items-center me-4">
+                            <input
+                                id="random_group"
+                                type="radio"
+                                value="random_group"
+                                name="group_selection_mode"
+                                v-model="groupSelectionMode"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                             >
-                                <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"></path>
+                            <label
+                                for="random_group"
+                                class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+                            >
+                                Random group
+                            </label>
+                        </div>
+
+                        <div class="flex items-center me-4">
+                            <input
+                                id="select_a_group"
+                                type="radio"
+                                value="selected_group"
+                                name="group_selection_mode"
+                                v-model="groupSelectionMode"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                            >
+                            <label
+                                for="select_a_group"
+                                class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+                            >
+                                Select a group
+                            </label>
+                        </div>
+                    </div>
+
+                    <div
+                        class="w-full"
+                    >
+                        <div
+                            class="flex flex-column sm:flex-row flex-wrap space-y-4 sm:space-y-0 items-center justify-between mb-2"
+                        >
+                            <div>
+                                <div class="w-full p-0">
+                                    <p
+                                        class="mb-3 italic text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        If no group is selected or if the selected group exceeds the limit, a random group will be assigned.
+                                        Know more <a href="#" class="text-blue-600 underline font-medium dark:text-blue-500 hover:no-underline">here</a>.
+                                    </p>
+                                </div>
+
+                                <div v-show="groupSelectionMode === 'selected_group'">
+                                    <pre v-if="false">{{ selectedGroup?.uid }}</pre>
+
+                                    <div class="flex gap-x-2">
+                                        <h5 v-if="selectedGroup">Selected group: <span class="mr-2 text-white">{{ selectedGroup?.uid }}</span>
+                                        <span class="bg-gray-300 dark:bg-white px-2 py-0 text-center rounded-full select-none">i</span></h5>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                v-show="groupSelectionMode === 'selected_group'"
+                                class="w-full flex flex-column sm:flex-row flex-wrap space-y-4 sm:space-y-0 items-center justify-end p-0 gap-x-3"
+                            >
+                                <button type="button" class="btn-primary-md rounded-lg" v-on:click="refreshRaffleGroupList">Refresh</button>
+                                <label for="group-table-search" class="sr-only">Search</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 rtl:inset-r-0 rtl:right-0 flex items-center ps-3 pointer-events-none">
+                                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
+                                    </div>
+                                    <input type="text" id="group-table-search" class="block p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search for group">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            v-show="groupSelectionMode === 'selected_group'"
+                            class="w-full overflow-y-auto --h-80 mb-2 rounded-md border-[0.05rem] border-gray-500"
+                            style="max-height: calc(var(--custom-height) - 15.5rem);"
+                        >
+                            <div class="relative shadow-md sm:rounded-lg">
+                                <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 rounded">
+                                    <thead
+                                        :class="['sticky top-0 text-xs text-gray-800 uppercase bg-gray-50 dark:bg-gray-950 dark:text-gray-400']"
+                                    >
+                                        <tr class="">
+                                            <th scope="col" class="p-4">
+                                                <div class="flex items-center">
+                                                    <div></div>
+                                                </div>
+                                            </th>
+                                            <th scope="col" class="px-6 py-3">
+                                                Group UID
+                                            </th>
+                                            <th scope="col" class="px-6 py-3">
+                                                Slots
+                                            </th>
+                                            <th scope="col" class="px-6 py-3">
+                                                Currency
+                                            </th>
+                                            <th scope="col" class="px-6 py-3">
+                                                Price
+                                            </th>
+                                            <th scope="col" class="px-6 py-3">
+                                                Action
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody
+                                        :class="[
+                                            'rounded',
+                                            'w-full',
+                                            'overflow-y-auto',
+                                            //'h-72',
+                                            'h-full',
+                                            'bg-white',
+                                            'dark:bg-gray-800',
+                                            'dark:highlight-white/5',
+                                            'shadow-lg',
+                                            'ring-0',
+                                            'ring-black/5',
+                                            // 'flex',
+                                            // 'flex-col',
+                                            // 'divide-y dark:divide-slate-200/5',
+                                        ]"
+                                    >
+                                        <template
+                                            v-for="(raffleGroup, dataItemIndex) in availableRaffleGroupList"
+                                            :key="dataItemIndex"
+                                        >
+                                            <tr
+                                                :class="[
+                                                    // 'bg-white dark:bg-gray-800',
+                                                    'border-b dark:border-gray-700',
+                                                    'h-8',
+                                                    {
+                                                        'hover:bg-gray-50 dark:hover:bg-gray-900': selectedGroup?.uid !== raffleGroup?.uid,
+                                                        'bg-gray-200': selectedGroup?.uid === raffleGroup?.uid,
+                                                        'dark:bg-gray-500': selectedGroup?.uid === raffleGroup?.uid,
+                                                    }
+                                                ]"
+                                            >
+                                                <td class="w-4 px-0 py-0">
+                                                    <div class="flex items-center px-4 py-0">
+                                                        <div class="inline-flex items-center gap-x-1 text-center ">
+                                                            <span v-if="raffleGroup.premium" title="Premium">
+                                                                <svg class="size-4 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                                                                    <path fill-rule="evenodd" d="M2 15.5V2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.74.439L8 13.069l-5.26 2.87A.5.5 0 0 1 2 15.5M8.16 4.1a.178.178 0 0 0-.32 0l-.634 1.285a.18.18 0 0 1-.134.098l-1.42.206a.178.178 0 0 0-.098.303L6.58 6.993c.042.041.061.1.051.158L6.39 8.565a.178.178 0 0 0 .258.187l1.27-.668a.18.18 0 0 1 .165 0l1.27.668a.178.178 0 0 0 .257-.187L9.368 7.15a.18.18 0 0 1 .05-.158l1.028-1.001a.178.178 0 0 0-.098-.303l-1.42-.206a.18.18 0 0 1-.134-.098z"/>
+                                                                </svg>
+                                                            </span>
+
+                                                            <span v-if="!raffleGroup.owner">
+                                                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                                                                    <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/>
+                                                                </svg>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-0 text-center font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                                    {{ raffleGroup.uid }}
+                                                </td>
+                                                <td class="px-6 py-0">
+                                                    {{ slotsFormat(raffleGroup?.slots) }}
+                                                </td>
+                                                <td class="px-6 py-0">
+                                                    {{ raffleGroup?.currency?.code || raffleGroup?.currency || '' }}
+                                                </td>
+                                                <td class="px-6 py-0">
+                                                    {{ formatMoney(raffleGroup?.price, raffleGroup?.currency) }}
+                                                </td>
+                                                <td class="px-6 py-0 inline-flex gap-x-1">
+                                                    <button
+                                                        type="button"
+                                                        :disabled="selectedGroup?.uid === raffleGroup?.uid"
+                                                        v-on:click="selectGroup(raffleGroup)"
+                                                        class="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                                                    >Select</button>
+                                                    <span v-if="!raffleGroup.password_required" title="NoPass">
+                                                        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                                                            <path d="M11 1a2 2 0 0 0-2 2v4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5V3a3 3 0 0 1 6 0v4a.5.5 0 0 1-1 0V3a2 2 0 0 0-2-2M3 8a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1z"/>
+                                                        </svg>
+                                                    </span>
+                                                    <span v-else title="Pass code required">
+                                                        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                                                            <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2m3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2"/>
+                                                        </svg>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                    <tfoot class="sticky bottom-0 text-xs text-gray-800 uppercase bg-gray-50 dark:bg-gray-800 dark:text-gray-400">
+                                        <tr>
+                                            <td colspan="100%" class="w-full px-8 py-1">
+                                                <nav class="flex items-center flex-column flex-wrap md:flex-row justify-between __pt-4" aria-label="Table navigation">
+                                                    <span class="text-sm font-normal text-gray-500 dark:text-gray-400 mb-4 md:mb-0 block w-full md:inline md:w-auto">Showing <span class="font-semibold text-gray-900 dark:text-white">1-10</span> of <span class="font-semibold text-gray-900 dark:text-white">1000</span></span>
+                                                    <ul class="inline-flex -space-x-px rtl:space-x-reverse text-sm h-8">
+                                                        <li>
+                                                            <a href="#" class="flex items-center justify-center px-3 h-8 ms-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">Previous</a>
+                                                        </li>
+                                                        <li>
+                                                            <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">1</a>
+                                                        </li>
+                                                        <li>
+                                                            <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">2</a>
+                                                        </li>
+                                                        <li>
+                                                            <a href="#" aria-current="page" class="flex items-center justify-center px-3 h-8 text-blue-600 border border-gray-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white">3</a>
+                                                        </li>
+                                                        <li>
+                                                            <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">4</a>
+                                                        </li>
+                                                        <li>
+                                                            <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">5</a>
+                                                        </li>
+                                                        <li>
+                                                    <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">Next</a>
+                                                        </li>
+                                                    </ul>
+                                                </nav>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <div
+                                tabindex="-1"
+                                class="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full flex bg-[#000000ea]"
+                                aria-modal="true"
+                                role="dialog"
+                                v-show="showGroupRequestPassModal"
+                            >
+                                <div class="relative p-4 w-full max-w-md max-h-full">
+                                    <!-- Modal content -->
+                                    <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                                        <!-- Modal header -->
+                                        <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+                                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                                                Protected Group
+                                            </h3>
+                                            <button
+                                                type="button"
+                                                v-on:click="cancelGroupRequestPass"
+                                                class="end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                                            >
+                                                <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"></path>
+                                                </svg>
+                                                <span class="sr-only">Close modal</span>
+                                            </button>
+                                        </div>
+                                        <!-- Modal body -->
+                                        <div class="p-4 md:p-5">
+                                            <div class="space-y-4" action="#">
+                                                <div class="text-sm font-semibold text-red-400 dark:text-red-300">
+                                                    <h6>
+                                                        This group is protected.
+                                                    </h6>
+                                                    <h6>
+                                                        To select this, please put the pass code.
+                                                    </h6>
+                                                </div>
+
+                                                <div>
+                                                    <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Pass code</label>
+                                                    <input type="password" name="password" id="password" placeholder="••••••••" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required="">
+                                                </div>
+
+                                                <div class="flex gap-x-3 aligin-center justify-between">
+                                                    <button
+                                                        v-on:click="cancelGroupRequestPass"
+                                                        type="button"
+                                                        class="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+                                                    >Cancel</button>
+                                                    <button type="button" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Confirm</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-2">
+                    <div class="mx-auto mt-6 max-w-4xl flex-1 space-y-6 lg:mt-0 lg:w-full">
+                        <div class="w-full">
+                            <h2 class="ml-4 inline-flex items-center text-base text-gray-500 dark:text-gray-400">Select a wallet</h2>
+                        </div>
+
+                        <div class="w-full mb-3 px-5 pt-2">
+                            <CustomizableButton
+                                @click="refreshWalletList"
+                                v-bind:disabled="!showRefreshWalletListButton"
+                            >
+                                Refresh
+                                <template v-slot:right>
+                                    <svg
+                                        class="w-3.5 h-3.5 ms-2"
+                                        :class="{
+                                            'animate-spin': loadingWalletList,
+                                        }"
+                                        fill="currentColor" xmlns="http://www.w3.org/2000/svg" id="mdi-refresh" viewBox="0 0 24 24"
+                                    >
+                                        <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"></path>
+                                    </svg>
+                                </template>
+                            </CustomizableButton>
+                        </div>
+
+                        <fieldset class="mx-4 my-2">
+                            <legend class="sr-only">Wallets</legend>
+
+                            <template
+                                v-for="(walletData, walletIndex) in walletsForCurrency"
+                                :key="walletIndex"
+                            >
+                                <div class="flex items-center mb-4">
+                                    <input
+                                        :id="dataGet(walletData, 'uuid')"
+                                        :data-currency-code="dataGet(walletData, 'currency.code')"
+                                        type="radio"
+                                        name="countries"
+                                        value="USA"
+                                        class="w-4 h-4 border-gray-300 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:focus:bg-blue-600 dark:bg-gray-700 dark:border-gray-600"
+                                        checked
+                                    >
+                                    <label
+                                        :for="dataGet(walletData, 'uuid')"
+                                        :data-currency-code="dataGet(walletData, 'currency.code')"
+                                        class="block ms-2  text-sm font-medium text-gray-900 dark:text-gray-300"
+                                    >
+                                        {{ dataGet(walletData, 'title') }}
+                                        {{ dataGet(walletData, 'currency.code') ? sprintf('(%s)', dataGet(walletData, 'currency.code')) : '' }}
+                                    </label>
+                                </div>
+                            </template>
+
+
+                            <!--
+                            <div class="flex items-center">
+                                <input id="option-disabled" type="radio" name="countries" value="China" class="w-4 h-4 border-gray-200 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600" disabled>
+                                <label for="option-disabled" class="block ms-2 text-sm font-medium text-gray-300 dark:text-gray-700">
+                                China (disabled)
+                                </label>
+                            </div>
+                            -->
+                        </fieldset>
+                    </div>
+
+                </div>
+
+                <div class="col-span-3">
+                    <div class="mx-auto mt-6 max-w-4xl flex-1 space-y-6 lg:mt-0 lg:w-full">
+                        <div class="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+                            <p class="text-xl font-semibold text-gray-900 dark:text-white">Order summary</p>
+
+                            <div class="space-y-4">
+                                <div class="space-y-2">
+                                <dl class="flex items-center justify-between gap-4">
+                                    <dt class="text-base font-normal text-gray-500 dark:text-gray-400">Original price</dt>
+                                    <dd class="text-base font-medium text-gray-900 dark:text-white">{{ selectedPriceItem?.prize_fmt }}</dd>
+                                </dl>
+
+                                <dl class="flex items-center justify-between gap-4">
+                                    <dt class="text-base font-normal text-gray-500 dark:text-gray-400">Savings</dt>
+                                    <dd class="text-base font-medium text-green-600">-$0.00</dd>
+                                </dl>
+
+                                <dl class="flex items-center justify-between gap-4">
+                                    <dt class="text-base font-normal text-gray-500 dark:text-gray-400">Tax</dt>
+                                    <dd class="text-base font-medium text-gray-900 dark:text-white">-</dd>
+                                </dl>
+                                </div>
+
+                                <dl class="flex items-center justify-between gap-4 border-t border-gray-200 pt-2 dark:border-gray-700">
+                                <dt class="text-base font-bold text-gray-900 dark:text-white">Total</dt>
+                                <dd class="text-base font-bold text-gray-900 dark:text-white">{{ selectedPriceItem?.prize_fmt }}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <template
+                v-slot:footer
+                v-if="!cartCollapsed"
+            >
+                <div class="flex justify-between pt-2">
+                    <button
+                        type="button"
+                        @click="cancelSelectedItem"
+                        class="btn-muted rounded-md"
+                    >Cancel</button>
+
+                    <CustomizableButton>
+                        Take my place
+                        <template v-slot:right>
+                            <svg class="rtl:rotate-180 w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"></path>
                             </svg>
                         </template>
                     </CustomizableButton>
                 </div>
 
-                <fieldset class="mx-4 my-2">
-                    <legend class="sr-only">Wallets</legend>
-
-                    <template
-                        v-for="(walletData, walletIndex) in walletsForCurrency"
-                        :key="walletIndex"
-                    >
-                        <div class="flex items-center mb-4">
-                            <input
-                                :id="dataGet(walletData, 'uuid')"
-                                :data-currency-code="dataGet(walletData, 'currency.code')"
-                                type="radio"
-                                name="countries"
-                                value="USA"
-                                class="w-4 h-4 border-gray-300 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:focus:bg-blue-600 dark:bg-gray-700 dark:border-gray-600"
-                                checked
-                            >
-                            <label
-                                :for="dataGet(walletData, 'uuid')"
-                                :data-currency-code="dataGet(walletData, 'currency.code')"
-                                class="block ms-2  text-sm font-medium text-gray-900 dark:text-gray-300"
-                            >
-                                {{ dataGet(walletData, 'title') }}
-                                {{ dataGet(walletData, 'currency.code') ? sprintf('(%s)', dataGet(walletData, 'currency.code')) : '' }}
-                            </label>
-                        </div>
-                    </template>
-
-
-                    <!--
-                    <div class="flex items-center">
-                        <input id="option-disabled" type="radio" name="countries" value="China" class="w-4 h-4 border-gray-200 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600" disabled>
-                        <label for="option-disabled" class="block ms-2 text-sm font-medium text-gray-300 dark:text-gray-700">
-                        China (disabled)
-                        </label>
-                    </div>
-                    -->
-                </fieldset>
-            </div>
-
-            <div class="col-span-5 h-48 -mt-4">
-                <div class="flex flex-column sm:flex-row flex-wrap space-y-4 sm:space-y-0 items-center justify-between mb-2">
-                    <div>
-                        <h5>Selected group: <span class="text-white">Xyz</span>
-                        <span class="bg-gray-300 dark:bg-white px-2 py-0 text-center rounded-full">i</span></h5>
-
-                        <button type="button" v-on:click="refreshRaffleGroupList">Refresh</button>
-                    </div>
-
-                    <div class="flex flex-column sm:flex-row flex-wrap space-y-4 sm:space-y-0 items-center justify-between p-0">
-                        <label for="group-table-search" class="sr-only">Search</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 rtl:inset-r-0 rtl:right-0 flex items-center ps-3 pointer-events-none">
-                                <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
-                            </div>
-                            <input type="text" id="group-table-search" class="block p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search for group">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="w-full overflow-y-auto h-64 mb-2 rounded-md border-[0.05rem] border-gray-500">
-                    <div class="relative shadow-md sm:rounded-lg">
-                        <table class="w-full h-48 text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 rounded">
-                            <thead
-                                :class="['sticky top-0 text-xs text-gray-800 uppercase bg-gray-50 dark:bg-gray-950 dark:text-gray-400']"
-                            >
-                                <tr class="">
-                                    <th scope="col" class="p-4">
-                                        <div class="flex items-center">
-                                            <div></div>
-                                        </div>
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Group UID
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Slots
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Currency
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Price
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Action
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody
-                                :class="[
-                                    'rounded',
-                                    'w-full',
-                                    'overflow-y-auto',
-                                    //'h-72',
-                                    'h-full',
-                                    'bg-white',
-                                    'dark:bg-gray-800',
-                                    'dark:highlight-white/5',
-                                    'shadow-lg',
-                                    'ring-0',
-                                    'ring-black/5',
-                                    // 'flex',
-                                    // 'flex-col',
-                                    // 'divide-y dark:divide-slate-200/5',
-                                ]"
-                            >
-                                <template
-                                    v-for="(dataItem, dataItemIndex) in availableRaffleGroupList"
-                                    :key="dataItemIndex"
-                                >
-                                    <tr
-                                        :class="[
-                                            // 'bg-white dark:bg-gray-800',
-                                            'hover:bg-gray-50 dark:hover:bg-gray-900',
-                                            'border-b dark:border-gray-700',
-                                            'h-8',
-                                        ]"
-                                    >
-                                        <td class="w-4 px-0 py-0">
-                                            <div class="flex items-center px-4 py-0">
-                                                <div class="inline-flex items-center gap-x-1 text-center ">
-                                                    <span v-if="dataItemIndex % 3 === 0">
-                                                        <svg class="size-4 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-                                                            <path fill-rule="evenodd" d="M2 15.5V2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.74.439L8 13.069l-5.26 2.87A.5.5 0 0 1 2 15.5M8.16 4.1a.178.178 0 0 0-.32 0l-.634 1.285a.18.18 0 0 1-.134.098l-1.42.206a.178.178 0 0 0-.098.303L6.58 6.993c.042.041.061.1.051.158L6.39 8.565a.178.178 0 0 0 .258.187l1.27-.668a.18.18 0 0 1 .165 0l1.27.668a.178.178 0 0 0 .257-.187L9.368 7.15a.18.18 0 0 1 .05-.158l1.028-1.001a.178.178 0 0 0-.098-.303l-1.42-.206a.18.18 0 0 1-.134-.098z"/>
-                                                        </svg>
-                                                    </span>
-
-                                                    <span v-if="dataItemIndex % 3 === 0">
-                                                        <span v-if="dataItemIndex % 5 === 0">
-                                                            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-                                                                <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2m3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2"/>
-                                                            </svg>
-                                                        </span>
-                                                        <span v-else>
-                                                            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-                                                                <path d="M11 1a2 2 0 0 0-2 2v4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5V3a3 3 0 0 1 6 0v4a.5.5 0 0 1-1 0V3a2 2 0 0 0-2-2M3 8a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1z"/>
-                                                            </svg>
-                                                        </span>
-                                                    </span>
-
-                                                    <span v-else>
-                                                        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-                                                            <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/>
-                                                        </svg>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <th scope="row" class="inline-flex items-center gap-x-1 text-center px-6 py-0 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                            <span>XXXXX-XXXX</span>
-                                        </th>
-                                        <td class="px-6 py-0">
-                                            3/10
-                                        </td>
-                                        <td class="px-6 py-0">
-                                            BRL
-                                        </td>
-                                        <td class="px-6 py-0">
-                                            $1999
-                                        </td>
-                                        <td class="px-6 py-0">
-                                            <button
-                                                type="button"
-                                                class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                                            >Select</button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                            <tfoot class="sticky bottom-0 text-xs text-gray-800 uppercase bg-gray-50 dark:bg-gray-800 dark:text-gray-400">
-                                <tr>
-                                    <td colspan="100%" class="w-full px-8 py-1">
-                                        <nav class="flex items-center flex-column flex-wrap md:flex-row justify-between __pt-4" aria-label="Table navigation">
-                                            <span class="text-sm font-normal text-gray-500 dark:text-gray-400 mb-4 md:mb-0 block w-full md:inline md:w-auto">Showing <span class="font-semibold text-gray-900 dark:text-white">1-10</span> of <span class="font-semibold text-gray-900 dark:text-white">1000</span></span>
-                                            <ul class="inline-flex -space-x-px rtl:space-x-reverse text-sm h-8">
-                                                <li>
-                                                    <a href="#" class="flex items-center justify-center px-3 h-8 ms-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">Previous</a>
-                                                </li>
-                                                <li>
-                                                    <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">1</a>
-                                                </li>
-                                                <li>
-                                                    <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">2</a>
-                                                </li>
-                                                <li>
-                                                    <a href="#" aria-current="page" class="flex items-center justify-center px-3 h-8 text-blue-600 border border-gray-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white">3</a>
-                                                </li>
-                                                <li>
-                                                    <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">4</a>
-                                                </li>
-                                                <li>
-                                                    <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">5</a>
-                                                </li>
-                                                <li>
-                                            <a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">Next</a>
-                                                </li>
-                                            </ul>
-                                        </nav>
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="w-full">
-                    <p
-                        class="mb-3 text-sm text-gray-500 dark:text-gray-400"
-                    >If no group is select, a random group will be assigned.</p>
-                </div>
-            </div>
-            <div class="col-span-3"></div>
-
-            <div class="col-span-12 mb-3">
-                <p
-                    class="mb-3 text-sm text-gray-500 dark:text-gray-400"
-                >If no group is select, a random group will be assigned.</p>
-                <p
-                    class="mb-3 text-sm text-gray-500 dark:text-gray-400"
-                >Know more <a href="#" class="text-blue-600 underline font-medium dark:text-blue-500 hover:no-underline">here</a>.</p>
-            </div>
-        </div>
-
-        <template v-slot:footer>
-            <MuttedButton href="#">Learn more</MuttedButton>
-
-            <CustomizableButton>
-                Algo
-                <template v-slot:right>
-                    <svg class="rtl:rotate-180 w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"></path>
-                    </svg>
-                </template>
-            </CustomizableButton>
-            <button
-                type="button"
-                @click="emitClosing"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 mx-2"
-            >Cancel</button>
-            <PrimaryButton>PrimaryButton</PrimaryButton>
-        </template>
-    </ModalBottomDrawer>
+                <!-- <BasicTooltip></BasicTooltip> -->
+            </template>
+        </ModalBottomDrawer>
+    </template>
 </template>
 
 <style>

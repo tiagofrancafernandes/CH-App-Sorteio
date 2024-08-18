@@ -1,3 +1,15 @@
+import {
+    generateRandomString,
+    limit,
+    trimSlashes,
+} from '@/Helpers/string/index';
+
+export {
+    generateRandomString,
+    limit,
+    trimSlashes,
+}
+
 export const toTitle = (text) => {
     if (!text || typeof text !== 'string') {
       return '';
@@ -49,4 +61,27 @@ export const validChars = (text, regex = null) => {
         .split('  ')
         .join(' ')
         .trim();
+}
+
+export const asCurrency = (currency, locale, options = {}) => {
+    locale = locale && typeof locale === 'string' ? locale : 'en-US';
+
+    options = options && typeof options === 'object' && !Array.isArray(options) ? options : {};
+
+    try {
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency,
+            ...options,
+        });
+    } catch (error) {
+        console.error(error);
+
+        return null;
+    }
+}
+
+export const currencyFormat = (value, currency, locale, options = {}) => {
+    value = !isNaN(value - 0) ? value - 0 : 0;
+    return asCurrency(currency, locale, options).format(value);
 }

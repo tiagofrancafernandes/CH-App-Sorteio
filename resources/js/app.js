@@ -17,9 +17,11 @@ import AppExtra from '@/extra/plugins/AppExtra';
 
 import * as ObjectHelpers from '@/Helpers/object/object-helpers';
 import * as StringHelper from '@/Helpers/string/index';
+import * as StringHelpers from '@/Libs/Helpers/StringHelpers';
 
-globalThis.StringHelper = StringHelper;
-globalThis.ObjectHelpers = ObjectHelpers;
+window.StringHelper = StringHelper;
+window.ObjectHelpers = ObjectHelpers;
+window.StringHelpers = StringHelpers;
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

@@ -32,9 +32,10 @@ class FakeRaffleGroupHelpers
             'price' => (rand(0, 20) * 5) . '.' . (rand(0, 9) . rand(0, 9)), // WIP
             'slots' => $fakeSlot($slots),
             'currency' => Arr::random(array_keys(static::currencies())),
-            'premium' => $premium = fake()->boolean(70),
-            'protected' => $premium ? fake()->boolean(70) : false,
-            'join_password' => 'abc123',
+            'owner' => $owner = fake()->boolean(70) ? str()->uuid() : null,
+            'premium' => $owner ? fake()->boolean(70) : false,
+            'join_password' => $password = fake()->boolean(70) ? 'abc123' : null,
+            'password_required' => boolval($password),
         ];
 
         $wallets = collect();

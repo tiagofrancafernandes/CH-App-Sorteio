@@ -1,0 +1,112 @@
+@layer components {
+    .btn---base {
+        @apply inline-flex items-center shadow-md focus:outline-none focus:ring-0 focus:ring-opacity-75;
+    }
+
+    .btn---base-md {
+        @apply btn---base py-2 px-4 text-sm;
+    }
+
+    .btn---base-xs {
+        @apply btn---base py-1 px-1 text-xs;
+    }
+
+    .btn---base-sm {
+        @apply btn---base py-1 px-2 text-sm;
+    }
+
+    .btn---base-lg {
+        @apply btn---base py-3 px-5 text-md;
+    }
+
+    /* .btn-violet* START */
+    .btn-violet-base {
+        @apply btn---base bg-violet-500 text-white hover:bg-violet-700 focus:ring-violet-400;
+    }
+
+    .btn-violet, .btn-violet-md {
+        @apply btn---base-md btn-violet-base;
+    }
+
+    .btn-violet-xs {
+        @apply btn---base-xs btn-violet-base;
+    }
+
+    .btn-violet-sm {
+        @apply btn---base-sm btn-violet-base;
+    }
+
+    .btn-violet-lg {
+        @apply btn---base-lg btn-violet-base;
+    }
+    /* .btn-primary* END */
+
+    /* .btn-primary* START */
+    .btn-primary-base {
+        @apply btn---base bg-blue-700 text-white hover:bg-blue-800 focus:ring-blue-400 dark:bg-blue-700 dark:hover:bg-blue-800 dark:focus:ring-blue-800;
+
+    }
+
+    .btn-primary, .btn-primary-md {
+        @apply btn---base-md btn-primary-base;
+    }
+
+    .btn-primary-xs {
+        @apply btn---base-xs btn-primary-base;
+    }
+
+    .btn-primary-sm {
+        @apply btn---base-sm btn-primary-base;
+    }
+
+    .btn-primary-lg {
+        @apply btn---base-lg btn-primary-base;
+    }
+    /* .btn-primary* END */
+
+    /* .btn-danger* START */
+    .btn-danger-base {
+        @apply btn---base bg-red-700 text-white hover:bg-red-800 focus:ring-red-400 dark:bg-red-700 dark:hover:bg-red-800 dark:focus:ring-red-800;
+
+    }
+
+    .btn-danger, .btn-danger-md {
+        @apply btn---base-md btn-danger-base;
+    }
+
+    .btn-danger-xs {
+        @apply btn---base-xs btn-danger-base;
+    }
+
+    .btn-danger-sm {
+        @apply btn---base-sm btn-danger-base;
+    }
+
+    .btn-danger-lg {
+        @apply btn---base-lg btn-danger-base;
+    }
+    /* .btn-danger* END */
+
+    /* .btn-muted* START */
+    .btn-muted-base {
+        @apply btn---base text-gray-900 bg-white border border-gray-200 focus:outline-none hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-0 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700;
+
+    }
+
+    .btn-muted, .btn-muted-md {
+        @apply btn---base-md btn-muted-base;
+    }
+
+    .btn-muted-xs {
+        @apply btn---base-xs btn-muted-base;
+    }
+
+    .btn-muted-sm {
+        @apply btn---base-sm btn-muted-base;
+    }
+
+    .btn-muted-lg {
+        @apply btn---base-lg btn-muted-base;
+    }
+    /* .btn-muted* END */
+}

@@ -61,3 +61,58 @@ Route::post('wallet/{walletId}/change', [WalletController::class, 'changeToWalle
     // ?->where('wallet', '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
         ?->where('wallet', '^[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}$')
         ?->name('api.wallet.change');
+
+Route::prefix('fake-job-control')->group(function () {
+    Route::get('dispatch/{jobName}', function (string $jobName) {
+        $jobId = uniqid();
+        $jobStatus = cache()->remember('fake_job_id_' . $jobId, (24 * 60 * 60), fn () => 'running');
+
+        return response()->json([
+            'job' => [
+                'id' => $jobId,
+                'status' => $jobStatus,
+            ],
+        ]);
+    });
+
+    Route::get('status/{jobId}', function (string $jobId) {
+        $key = 'fake_job_id_' . $jobId;
+
+        if (!cache()->has($key)) {
+            return response()->json([
+                'message' => 'Job not found!',
+            ], 404);
+        }
+
+        $jobStatus = cache()->remember($key, (24 * 60 * 60), fn () => 'running');
+
+        return response()->json([
+            'job' => [
+                'id' => $jobId,
+                'status' => $jobStatus,
+            ],
+        ]);
+    });
+
+    Route::get('set-status/{jobId}/{jobStatus?}', function (string $jobId, ?string $jobStatus = null) {
+        $key = 'fake_job_id_' . $jobId;
+
+        if (!cache()->has($key)) {
+            return response()->json([
+                'message' => 'Job not found!',
+            ], 404);
+        }
+
+        $statuses = ['finished', 'fail', 'running', 'waiting'];
+        $jobStatus = $jobStatus && in_array($jobStatus, $statuses) ? $jobStatus : Arr::random($statuses);
+
+        cache()->put($key, $jobStatus, (24 * 60 * 60));
+
+        return response()->json([
+            'job' => [
+                'id' => $jobId,
+                'status' => $jobStatus,
+            ],
+        ]);
+    });
+});

@@ -1,3 +1,5 @@
+@import url('./tw-components/buttons.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,4 +12,36 @@
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+.h-min-custom {
+    min-height: var(--custom-min-height, 1rem);
+}
+
+.h-min-custom-48 {
+    min-height: var(--custom-min-height, 12rem);
+}
+
+.h-min-custom-60 {
+    min-height: var(--custom-min-height, 15rem);
+}
+
+.h-min-custom-80 {
+    min-height: var(--custom-min-height, 20rem);
+}
+
+.h-custom {
+    height: var(--custom-height, 1rem);
+}
+
+.h-custom-48 {
+    height: var(--custom-height, 12rem);
+}
+
+.h-custom-60 {
+    height: var(--custom-height, 15rem);
+}
+
+.h-custom-80 {
+    height: var(--custom-height, 20rem);
 }
