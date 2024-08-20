@@ -9,10 +9,29 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
+ *
+ *
  * @property int $id
- * @property-read string $singleItemCacheKey
- * @method ?Ticket $ticket
- * @method ?TicketGroup $ticketGroup
+ * @property int $ticket_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property-read mixed $single_item_cache_key
+ * @property-read mixed $ticket_group
+ * @property-read mixed $user
+ * @property-read Ticket $ticket
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner query()
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner whereTicketId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner withTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder|TicketGroupWinner withoutTrashed()
+ * @mixin \Eloquent
  */
 class TicketGroupWinner extends Model
 {

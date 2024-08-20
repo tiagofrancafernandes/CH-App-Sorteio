@@ -10,6 +10,46 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 
+/**
+ *
+ *
+ * @property int $id
+ * @property string $currency
+ * @property string $draw_date_limit
+ * @property int|null $maximum_of_participants
+ * @property int $minimum_of_participants
+ * @property string|null $individual_ticket_price
+ * @property int $operating_fee
+ * @property TicketGroupOperatingFreeMode $operating_fee_mode
+ * @property TicketGroupStatus $status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property-read mixed $group_name
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Ticket> $tickets
+ * @property-read int|null $tickets_count
+ * @method static \Database\Factories\TicketGroupFactory factory($count = null, $state = [])
+ * @method static Builder|TicketGroup newModelQuery()
+ * @method static Builder|TicketGroup newQuery()
+ * @method static Builder|TicketGroup onlyTrashed()
+ * @method static Builder|TicketGroup openGroups(?int $afterMinutes = null)
+ * @method static Builder|TicketGroup query()
+ * @method static Builder|TicketGroup whereCreatedAt($value)
+ * @method static Builder|TicketGroup whereCurrency($value)
+ * @method static Builder|TicketGroup whereDeletedAt($value)
+ * @method static Builder|TicketGroup whereDrawDateLimit($value)
+ * @method static Builder|TicketGroup whereId($value)
+ * @method static Builder|TicketGroup whereIndividualTicketPrice($value)
+ * @method static Builder|TicketGroup whereMaximumOfParticipants($value)
+ * @method static Builder|TicketGroup whereMinimumOfParticipants($value)
+ * @method static Builder|TicketGroup whereOperatingFee($value)
+ * @method static Builder|TicketGroup whereOperatingFeeMode($value)
+ * @method static Builder|TicketGroup whereStatus($value)
+ * @method static Builder|TicketGroup whereUpdatedAt($value)
+ * @method static Builder|TicketGroup withTrashed()
+ * @method static Builder|TicketGroup withoutTrashed()
+ * @mixin \Eloquent
+ */
 class TicketGroup extends Model
 {
     use HasFactory;
