@@ -75,7 +75,9 @@ let showOrderDetail = ref(false);
 let showRefreshWalletListButton = ref(true);
 let groupSelectionMode = ref('random_group');
 let selectedGroup = ref(null);
+let preSelectedGroup = ref(null);
 let showGroupRequestPassModal = ref(false);
+let groupRequestPassModalError = ref('Erro exemplo');
 let selectedGroupProtectedPass = ref(null);
 
 const setPreFilter = (type = null) => {
@@ -128,16 +130,95 @@ const removeSelectedPriceItem = () => {
     availableRaffleGroupList.value = [];
     groupSelectionMode.value = 'random_group';
     selectedGroup.value = null;
+    preSelectedGroup.value = null;
+    showGroupRequestPassModal.value = false;
+    selectedGroupProtectedPass.value = null;
 }
 
 const cancelGroupRequestPass = () => {
     showGroupRequestPassModal.value = false;
 }
 
+const confirmGroupRequestPass = async () => { // WIP
+    if (showGroupRequestPassModal.value && !selectedGroupProtectedPass.value) {
+        groupRequestPassModalError.value = 'Pass code is required!';
+        console.log(groupRequestPassModalError.value);
+        return;
+    }
+
+    let groupId = '123';// TODO: usar id|uid valido
+
+    let requestUrl = route('api.group.check_pass', groupId);
+
+    const response = await fetch(requestUrl, {// TODO: remover. Usar requisição real de validação de senha e retornar token
+        method: 'POST',
+        headers: {
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'Authorization': 'Bearer xyz1234',
+        },
+        body: JSON.stringify({
+            a: 'AAAA',
+            pass_code: selectedGroupProtectedPass.value,
+            groupId,
+        }),
+    });
+
+    if (!response || !response.ok) {
+        groupRequestPassModalError.value = 'An error has occurred!';
+        // return;
+    }
+
+    let data = await response.json();
+
+    console.log('data+', data);
+
+    if (!data || typeof data !== 'object') {
+        groupRequestPassModalError.value = 'An error has occurred!';
+        return;
+    }
+
+    if ('error' in data && data['error'] && typeof(data['error']) === 'string') {
+        groupRequestPassModalError.value = data['error'];
+        return;
+    }
+
+    let passCodeTokenKey = 'token'; // TODO: mudar para um token válido retornado da API
+
+    if (!(passCodeTokenKey in data)) {
+        groupRequestPassModalError.value = 'An error has occurred! Inválid pass code token!';
+        return;
+    }
+
+    selectedGroupProtectedPass.value = data[passCodeTokenKey] ?? null;
+
+    if (!selectedGroupProtectedPass.value) {
+        selectedGroupProtectedPass.value = null;
+        showGroupRequestPassModal.value = true;
+        return;
+    }
+
+    showGroupRequestPassModal.value = false;
+
+    selectedGroup.value = preSelectedGroup.value;
+    preSelectedGroup.value = null;
+}
+
 const selectGroup = (raffleGroup) => { // WIP
+    groupRequestPassModalError.value = null;
+    selectedGroupProtectedPass.value = null;
+    selectedGroup.value = null;
+    preSelectedGroup.value = null;
     console.log('raffleGroup', raffleGroup);
-    selectedGroup.value = raffleGroup;
     showGroupRequestPassModal.value = Boolean(raffleGroup?.password_required);
+
+    if (showGroupRequestPassModal.value && selectedGroupProtectedPass.value === null) {
+        preSelectedGroup.value = raffleGroup;
+        return;
+    }
+
+    selectedGroup.value = raffleGroup;
+    preSelectedGroup.value = null;
 }
 
 const showSelectedItem = computed(() => {
@@ -151,6 +232,9 @@ const cancelSelectedItem = (event = null) => {
         'selectedPriceItem', selectedPriceItem.value,
         'selectedPriceItemHash', selectedPriceItemHash.value,
         'availableRaffleGroupList', availableRaffleGroupList.value,
+
+        'selectedGroup', selectedGroup.value,
+        'preSelectedGroup', preSelectedGroup.value,
     );
 }
 
@@ -1287,7 +1371,7 @@ const formatMoney = (value, currency) => {
                                         <!-- Modal body -->
                                         <div class="p-4 md:p-5">
                                             <div class="space-y-4" action="#">
-                                                <div class="text-sm font-semibold text-red-400 dark:text-red-300">
+                                                <div class="text-sm font-semibold text-orange-400 dark:text-orange-300">
                                                     <h6>
                                                         This group is protected.
                                                     </h6>
@@ -1297,8 +1381,34 @@ const formatMoney = (value, currency) => {
                                                 </div>
 
                                                 <div>
-                                                    <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Pass code</label>
-                                                    <input type="password" name="password" id="password" placeholder="••••••••" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required="">
+                                                    <label
+                                                        for="group_passcode"
+                                                        :class="[
+                                                            'block mb-2 text-sm font-medium',
+                                                            {
+                                                                'text-red-700 dark:text-red-500': groupRequestPassModalError,
+                                                                'text-gray-900 dark:text-white': !groupRequestPassModalError,
+                                                            }
+                                                        ]"
+                                                    >Pass code</label>
+                                                    <input
+                                                        type="password"
+                                                        id="group_passcode"
+                                                        placeholder="Group pass code"
+                                                        v-model="selectedGroupProtectedPass"
+                                                        :class="[
+                                                            'text-sm border block w-full p-2.5 rounded-lg',
+                                                            'placeholder:italic',
+                                                            {'bg-red-50 border-red-500 text-red-900 placeholder-red-700 focus:ring-red-500 dark:bg-gray-700 focus:border-red-500 dark:text-red-500 dark:placeholder-red-500 dark:border-red-500': groupRequestPassModalError,
+                                                            'bg-gray-50 border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white': !groupRequestPassModalError,
+                                                            }
+                                                        ]"
+                                                        required=""
+                                                    >
+
+                                                    <p v-if="groupRequestPassModalError" class="mt-2 text-sm text-red-600 dark:text-red-500">
+                                                        <span class="font-medium">Error!</span> {{ groupRequestPassModalError }}
+                                                    </p>
                                                 </div>
 
                                                 <div class="flex gap-x-3 aligin-center justify-between">
@@ -1307,7 +1417,11 @@ const formatMoney = (value, currency) => {
                                                         type="button"
                                                         class="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                                                     >Cancel</button>
-                                                    <button type="button" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Confirm</button>
+                                                    <button
+                                                        v-on:click="confirmGroupRequestPass"
+                                                        type="button"
+                                                        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                                                    >Confirm</button>
                                                 </div>
                                             </div>
                                         </div>
