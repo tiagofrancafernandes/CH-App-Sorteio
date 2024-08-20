@@ -18,10 +18,25 @@ import AppExtra from '@/extra/plugins/AppExtra';
 import * as ObjectHelpers from '@/Helpers/object/object-helpers';
 import * as StringHelper from '@/Helpers/string/index';
 import * as StringHelpers from '@/Libs/Helpers/StringHelpers';
+import * as DataHelpers from '@/Libs/Helpers/DataHelpers';
 
 window.StringHelper = StringHelper;
 window.ObjectHelpers = ObjectHelpers;
 window.StringHelpers = StringHelpers;
+window.DataHelpers = DataHelpers;
+
+let toMap = {
+    ...DataHelpers,
+};
+
+for (let item of Object.entries(toMap)) {
+    let [key, value] = item;
+    if (key in window) {
+        key = `_${key}`;
+    }
+
+    window[key] = value;
+}
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

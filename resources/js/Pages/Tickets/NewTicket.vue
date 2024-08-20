@@ -243,7 +243,7 @@ const closingHandle = (eventData) => {
     cancelSelectedItem();
 }
 
-const setSelectedPriceItem = (priceItem = null) => {
+const setSelectedPriceItem = async (priceItem = null) => {
     if (!priceItem) {
         return;
     }
@@ -265,7 +265,15 @@ const setSelectedPriceItem = (priceItem = null) => {
         amountStr_fmt: currencyFmt && priceItem.amountStr ? currencyFmt.format(priceItem.amountStr) : priceItem.amountStr,
         admFee_fmt: currencyFmt && priceItem.admFee ? currencyFmt.format(priceItem.admFee) : priceItem.admFee,
     };
-    refreshRaffleGroupList();
+
+    if (!count(walletsForCurrency.value)) {
+        console.log('walletsForCurrency', walletsForCurrency.value, refreshWalletList);
+        await refreshWalletList()
+    }
+
+    if (groupSelectionMode.value === 'selected_group') {
+        refreshRaffleGroupList();
+    }
 
     let data = JSON.parse(JSON.stringify(priceItem));
     selectedPriceItemHash.value = priceItem?.hash;
@@ -1138,6 +1146,7 @@ const formatMoney = (value, currency) => {
                                 value="selected_group"
                                 name="group_selection_mode"
                                 v-model="groupSelectionMode"
+                                v-on:change="refreshRaffleGroupList"
                                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                             >
                             <label
@@ -1432,102 +1441,106 @@ const formatMoney = (value, currency) => {
                     </div>
                 </div>
 
-                <div class="col-span-2">
-                    <div class="mx-auto mt-6 max-w-4xl flex-1 space-y-6 lg:mt-0 lg:w-full">
-                        <div class="w-full">
-                            <h2 class="ml-4 inline-flex items-center text-base text-gray-500 dark:text-gray-400">Select a wallet</h2>
+                <div class="col-span-5">
+                    <div class="grid grid-cols-5">
+                        <div class="col-span-5 md:col-span-3">
+                            <div class="mx-auto mt-6 max-w-4xl flex-1 space-y-6 lg:mt-0 lg:w-full">
+                                <div class="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+                                    <p class="text-xl font-semibold text-gray-900 dark:text-white">Order summary</p>
+
+                                    <div class="space-y-4">
+                                        <div class="space-y-2">
+                                        <dl class="flex items-center justify-between gap-4">
+                                            <dt class="text-base font-normal text-gray-500 dark:text-gray-400">Original price</dt>
+                                            <dd class="text-base font-medium text-gray-900 dark:text-white">{{ selectedPriceItem?.amountStr_fmt }}</dd>
+                                        </dl>
+
+                                        <dl class="flex items-center justify-between gap-4">
+                                            <dt class="text-base font-normal text-gray-500 dark:text-gray-400">Savings</dt>
+                                            <dd class="text-base font-medium text-green-600">-$0.00</dd>
+                                        </dl>
+
+                                        <dl class="flex items-center justify-between gap-4">
+                                            <dt class="text-base font-normal text-gray-500 dark:text-gray-400">Tax</dt>
+                                            <dd class="text-base font-medium text-gray-900 dark:text-white">-</dd>
+                                        </dl>
+                                        </div>
+
+                                        <dl class="flex items-center justify-between gap-4 border-t border-gray-200 pt-2 dark:border-gray-700">
+                                        <dt class="text-xl font-bold text-gray-900 dark:text-white">Total</dt>
+                                        <dd class="text-xl font-bold text-green-500 dark:text-green-600">{{ selectedPriceItem?.amountStr_fmt }}</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="w-full mb-3 px-5 pt-2">
-                            <CustomizableButton
-                                @click="refreshWalletList"
-                                v-bind:disabled="!showRefreshWalletListButton"
-                            >
-                                Refresh
-                                <template v-slot:right>
-                                    <svg
-                                        class="w-3.5 h-3.5 ms-2"
-                                        :class="{
-                                            'animate-spin': loadingWalletList,
-                                        }"
-                                        fill="currentColor" xmlns="http://www.w3.org/2000/svg" id="mdi-refresh" viewBox="0 0 24 24"
-                                    >
-                                        <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"></path>
-                                    </svg>
-                                </template>
-                            </CustomizableButton>
-                        </div>
-
-                        <fieldset class="mx-4 my-2">
-                            <legend class="sr-only">Wallets</legend>
-
-                            <template
-                                v-for="(walletData, walletIndex) in walletsForCurrency"
-                                :key="walletIndex"
-                            >
-                                <div class="flex items-center mb-4">
-                                    <input
-                                        :id="dataGet(walletData, 'uuid')"
-                                        :data-currency-code="dataGet(walletData, 'currency.code')"
-                                        type="radio"
-                                        name="countries"
-                                        value="USA"
-                                        class="w-4 h-4 border-gray-300 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:focus:bg-blue-600 dark:bg-gray-700 dark:border-gray-600"
-                                        checked
-                                    >
-                                    <label
-                                        :for="dataGet(walletData, 'uuid')"
-                                        :data-currency-code="dataGet(walletData, 'currency.code')"
-                                        class="block ms-2  text-sm font-medium text-gray-900 dark:text-gray-300"
-                                    >
-                                        {{ dataGet(walletData, 'title') }}
-                                        {{ dataGet(walletData, 'currency.code') ? sprintf('(%s)', dataGet(walletData, 'currency.code')) : '' }}
-                                    </label>
-                                </div>
-                            </template>
-
-
-                            <!--
-                            <div class="flex items-center">
-                                <input id="option-disabled" type="radio" name="countries" value="China" class="w-4 h-4 border-gray-200 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600" disabled>
-                                <label for="option-disabled" class="block ms-2 text-sm font-medium text-gray-300 dark:text-gray-700">
-                                China (disabled)
-                                </label>
-                            </div>
-                            -->
-                        </fieldset>
-                    </div>
-
-                </div>
-
-                <div class="col-span-3">
-                    <div class="mx-auto mt-6 max-w-4xl flex-1 space-y-6 lg:mt-0 lg:w-full">
-                        <div class="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
-                            <p class="text-xl font-semibold text-gray-900 dark:text-white">Order summary</p>
-
-                            <div class="space-y-4">
-                                <div class="space-y-2">
-                                <dl class="flex items-center justify-between gap-4">
-                                    <dt class="text-base font-normal text-gray-500 dark:text-gray-400">Original price</dt>
-                                    <dd class="text-base font-medium text-gray-900 dark:text-white">{{ selectedPriceItem?.prize_fmt }}</dd>
-                                </dl>
-
-                                <dl class="flex items-center justify-between gap-4">
-                                    <dt class="text-base font-normal text-gray-500 dark:text-gray-400">Savings</dt>
-                                    <dd class="text-base font-medium text-green-600">-$0.00</dd>
-                                </dl>
-
-                                <dl class="flex items-center justify-between gap-4">
-                                    <dt class="text-base font-normal text-gray-500 dark:text-gray-400">Tax</dt>
-                                    <dd class="text-base font-medium text-gray-900 dark:text-white">-</dd>
-                                </dl>
+                        <div class="col-span-5 md:col-span-2">
+                            <div class="mx-auto mt-6 max-w-4xl flex-1 space-y-6 lg:mt-0 lg:w-full">
+                                <div class="w-full">
+                                    <h2 class="ml-4 inline-flex items-center text-base text-gray-500 dark:text-gray-400">Select a wallet</h2>
                                 </div>
 
-                                <dl class="flex items-center justify-between gap-4 border-t border-gray-200 pt-2 dark:border-gray-700">
-                                <dt class="text-base font-bold text-gray-900 dark:text-white">Total</dt>
-                                <dd class="text-base font-bold text-gray-900 dark:text-white">{{ selectedPriceItem?.prize_fmt }}</dd>
-                                </dl>
+                                <div class="w-full mb-3 px-5 pt-2">
+                                    <CustomizableButton
+                                        @click="refreshWalletList"
+                                        v-bind:disabled="!showRefreshWalletListButton"
+                                    >
+                                        Refresh
+                                        <template v-slot:right>
+                                            <svg
+                                                class="w-3.5 h-3.5 ms-2"
+                                                :class="{
+                                                    'animate-spin': loadingWalletList,
+                                                }"
+                                                fill="currentColor" xmlns="http://www.w3.org/2000/svg" id="mdi-refresh" viewBox="0 0 24 24"
+                                            >
+                                                <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"></path>
+                                            </svg>
+                                        </template>
+                                    </CustomizableButton>
+                                </div>
+
+                                <fieldset class="mx-4 my-2">
+                                    <legend class="sr-only">Wallets</legend>
+
+                                    <template
+                                        v-for="(walletData, walletIndex) in walletsForCurrency"
+                                        :key="walletIndex"
+                                    >
+                                        <div class="flex items-center mb-4">
+                                            <input
+                                                :id="dataGet(walletData, 'uuid')"
+                                                :data-currency-code="dataGet(walletData, 'currency.code')"
+                                                type="radio"
+                                                name="countries"
+                                                value="USA"
+                                                class="w-4 h-4 border-gray-300 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:focus:bg-blue-600 dark:bg-gray-700 dark:border-gray-600"
+                                                checked
+                                            >
+                                            <label
+                                                :for="dataGet(walletData, 'uuid')"
+                                                :data-currency-code="dataGet(walletData, 'currency.code')"
+                                                class="block ms-2  text-sm font-medium text-gray-900 dark:text-gray-300"
+                                            >
+                                                {{ dataGet(walletData, 'title') }}
+                                                {{ dataGet(walletData, 'currency.code') ? sprintf('(%s)', dataGet(walletData, 'currency.code')) : '' }}
+                                            </label>
+                                        </div>
+                                    </template>
+
+
+                                    <!--
+                                    <div class="flex items-center">
+                                        <input id="option-disabled" type="radio" name="countries" value="China" class="w-4 h-4 border-gray-200 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600" disabled>
+                                        <label for="option-disabled" class="block ms-2 text-sm font-medium text-gray-300 dark:text-gray-700">
+                                        China (disabled)
+                                        </label>
+                                    </div>
+                                    -->
+                                </fieldset>
                             </div>
+
                         </div>
                     </div>
                 </div>
