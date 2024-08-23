@@ -341,20 +341,30 @@ export default {
               bottomtop: {
                 '0%, 100%': { transform: 'translate3d(0, 0, 0)' },
                 '50%': { transform: 'translate3d(0, -100%, 0)' }
-              }
+              },
+                gradient: {
+                    '0%': { backgroundPosition: '0% 50%' },
+                    '50%': { backgroundPosition: '100% 50%' },
+                    '100%': { backgroundPosition: '0% 50%' },
+                }
             },
             animation: {
-              linspin: 'linspin 1568.2353ms linear infinite',
-              easespin: 'easespin 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both',
-              'left-spin': 'left-spin 1333ms cubic-bezier(0.4, 0, 0.2, 1) infinite both',
-              'right-spin': 'right-spin 1333ms cubic-bezier(0.4, 0, 0.2, 1) infinite both',
-              'ping-once': 'ping 5s cubic-bezier(0, 0, 0.2, 1)',
-              rotating: 'rotating 30s linear infinite',
-              topbottom: 'topbottom 60s infinite alternate linear',
-              bottomtop: 'bottomtop 60s infinite alternate linear',
-              'spin-1.5': 'spin 1.5s linear infinite',
-              'spin-2': 'spin 2s linear infinite',
-              'spin-3': 'spin 3s linear infinite'
+                gradient: '5s ease infinite',
+                linspin: 'linspin 1568.2353ms linear infinite',
+                easespin: 'easespin 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both',
+                'left-spin': 'left-spin 1333ms cubic-bezier(0.4, 0, 0.2, 1) infinite both',
+                'right-spin': 'right-spin 1333ms cubic-bezier(0.4, 0, 0.2, 1) infinite both',
+                'ping-once': 'ping 5s cubic-bezier(0, 0, 0.2, 1)',
+                rotating: 'rotating 30s linear infinite',
+                topbottom: 'topbottom 60s infinite alternate linear',
+                bottomtop: 'bottomtop 60s infinite alternate linear',
+                'spin-1.5': 'spin 1.5s linear infinite',
+                'spin-2': 'spin 2s linear infinite',
+                'spin-3': 'spin 3s linear infinite',
+                'spin-slow': 'spin 2s linear infinite',
+                'spin-very-slow': 'spin 3s linear infinite',
+                'bounce-slow': 'bounce 1s linear infinite',
+                'bounce-very-slow': 'bounce 3s linear infinite',
             },
         },
     },

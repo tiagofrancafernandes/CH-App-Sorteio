@@ -1,0 +1,33 @@
+@keyframes gradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.gradient-1-bg {
+    background: linear-gradient(270deg, #ff7e5f, #feb47b, #ff7e5f);
+    background-size: 400% 400%;
+    animation: gradient 5s ease infinite;
+}
+
+.gradient-2-bg {
+    background: linear-gradient(270deg, #e06907, #8b61ee, #ac6aeb);
+    background-size: 400% 400%;
+    animation: gradient 5s ease infinite;
+}
+
+.gradient-custom-bg {
+    background: linear-gradient(270deg, var(--custom-color-1, #e06907), var(--custom-color-2, #8b61ee), var(--custom-color-3, #ac6aeb));
+    background-size: 400% 400%;
+    animation: gradient 5s ease infinite;
+}
+
+.tgo-animate-gradient {
+    animation: gradient 5s ease infinite;
+}

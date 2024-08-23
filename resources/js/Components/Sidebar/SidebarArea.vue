@@ -361,7 +361,8 @@ const buyNowAction = () => {
     <!-- SIDEBAR HEADER -->
     <div class="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
       <Link href="/">
-        <img src="@/assets/images/logo/logo.svg" alt="Logo" />
+        <img class="hidden dark:block" src="@public/images/chronos/logo-md-wide-dark.png" alt="Logo" />
+        <img class="dark:hidden" src="@public/images/chronos/logo-md-wide-light.png" alt="Logo" />
       </Link>
 
       <button class="block lg:hidden" @click="sidebarStore.isSidebarOpen = false">
@@ -408,14 +409,43 @@ const buyNowAction = () => {
         >
             <h3 class="mb-1 font-semibold text-white">Fast Ticket Buy</h3>
             <p class="mb-4 text-xs text-bodydark2">Now is your turn</p>
-            <Link
+
+            <!--
+            <div class="mb-3">
+                <button class="btn-gradient-2">Take your ticket</button>
+            </div>
+            -->
+
+            <div class="flex w-full">
+                <Link
+                    :href="route('tickets.new')"
+                    rel="nofollow"
+                    v-on:click.prevent="buyNowAction"
+                    _as="button"
+                    class="btn-gradient-custom-bg w-full flex"
+                    style="--custom-color-1: orange; --custom-color-2: red; --custom-color-3: blue;"
+                >
+                    Take your ticket
+                    <svg class="ms-2 w-6 h-6 text-violet-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M20 12v5H0v-5a2 2 0 1 0 0-4V3h20v5a2 2 0 1 0 0 4zM3 5v10h14V5H3zm7 7.08l-2.92 2.04L8.1 10.7 5.27 8.56l3.56-.08L10 5.12l1.17 3.36 3.56.08-2.84 2.15 1.03 3.4L10 12.09z"></path>
+                    </svg>
+                    <span class="absolute end-10 top-3 w-4 h-4 bg-violet-900 animate-ping rounded-full"></span>
+                </Link>
+            </div>
+
+            <!-- <Link
                 :href="route('tickets.new')"
                 rel="nofollow"
                 v-on:click.prevent="buyNowAction"
-                class="flex items-center justify-center rounded-md bg-primary p-2 font-medium text-white hover:bg-opacity-90"
+                class="animate-bounce flex items-center justify-center rounded-md bg-primary p-2 font-medium text-white hover:bg-opacity-90"
             >
                 Take your ticket
-            </Link>
+                <svg class="ms-2 w-6 h-6 text-violet-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M20 12v5H0v-5a2 2 0 1 0 0-4V3h20v5a2 2 0 1 0 0 4zM3 5v10h14V5H3zm7 7.08l-2.92 2.04L8.1 10.7 5.27 8.56l3.56-.08L10 5.12l1.17 3.36 3.56.08-2.84 2.15 1.03 3.4L10 12.09z"></path>
+                </svg>
+
+                <span class="ms-2 w-4 h-4 bg-violet-900 animate-ping rounded-full"></span>
+            </Link> -->
         </div>
       <!-- Promo Box -->
     </div>

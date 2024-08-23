@@ -101,6 +101,7 @@ let selectedPriceItemHash = ref(null);
 let selectedPriceItem = ref(null);
 let loadingWalletList = ref(false);
 let userWalletList = ref(props?.userWalletList || []);
+let selectedWallet = ref({});
 
 let loadingRaffleGroupList = ref(false);
 let showRefreshRaffleGroupListButton = ref(true);
@@ -1513,10 +1514,10 @@ const formatMoney = (value, currency) => {
                                                 :id="dataGet(walletData, 'uuid')"
                                                 :data-currency-code="dataGet(walletData, 'currency.code')"
                                                 type="radio"
-                                                name="countries"
-                                                value="USA"
+                                                name="user_wallet"
+                                                v-model="selectedWallet"
+                                                :value="walletData"
                                                 class="w-4 h-4 border-gray-300 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:focus:bg-blue-600 dark:bg-gray-700 dark:border-gray-600"
-                                                checked
                                             >
                                             <label
                                                 :for="dataGet(walletData, 'uuid')"
@@ -1525,22 +1526,13 @@ const formatMoney = (value, currency) => {
                                             >
                                                 {{ dataGet(walletData, 'title') }}
                                                 {{ dataGet(walletData, 'currency.code') ? sprintf('(%s)', dataGet(walletData, 'currency.code')) : '' }}
+
+                                                <button class="btn-primary-xs rounded-sm" type="button">Show wallet</button>
                                             </label>
                                         </div>
                                     </template>
-
-
-                                    <!--
-                                    <div class="flex items-center">
-                                        <input id="option-disabled" type="radio" name="countries" value="China" class="w-4 h-4 border-gray-200 focus:ring-0 focus:ring-blue-300 dark:focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600" disabled>
-                                        <label for="option-disabled" class="block ms-2 text-sm font-medium text-gray-300 dark:text-gray-700">
-                                        China (disabled)
-                                        </label>
-                                    </div>
-                                    -->
                                 </fieldset>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -1557,7 +1549,9 @@ const formatMoney = (value, currency) => {
                         class="btn-muted rounded-md"
                     >Cancel</button>
 
-                    <CustomizableButton>
+                    <CustomizableButton
+                        :disabled="!selectedWallet?.uuid"
+                    >
                         Take my place
                         <template v-slot:right>
                             <svg class="rtl:rotate-180 w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">

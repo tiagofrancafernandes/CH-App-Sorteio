@@ -109,4 +109,17 @@
         @apply btn---base-lg btn-muted-base;
     }
     /* .btn-muted* END */
+
+
+    .btn-gradient-1 {
+        @apply gradient-1-bg transform rounded-lg px-6 py-2 font-bold text-white shadow-lg transition-transform hover:scale-105;
+    }
+
+    .btn-gradient-2 {
+        @apply gradient-2-bg transform rounded-lg px-6 py-2 font-bold text-white shadow-lg transition-transform hover:scale-105;
+    }
+
+    .btn-gradient-custom-bg {
+        @apply gradient-custom-bg transform rounded-lg px-6 py-2 font-bold text-white shadow-lg transition-transform hover:scale-105;
+    }
 }

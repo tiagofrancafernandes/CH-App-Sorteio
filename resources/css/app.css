@@ -1,8 +1,6 @@
+@import url('./tailwind-init.css');
+@import url('./css-blocks/gradient.css');
 @import url('./tw-components/buttons.css');
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 .fade-enter-active,
 .fade-leave-active {
