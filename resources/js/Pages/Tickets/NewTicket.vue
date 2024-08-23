@@ -5,6 +5,7 @@ import { useSelectedTicket } from '@/stores/selectedTicketStore';
 import * as ObjectHelpers from '@/Helpers/object/object-helpers';
 import * as StringHelpers from '@/Libs/Helpers/StringHelpers';
 import { dataGet } from '@/Helpers/object/object-helpers';
+import { router } from '@inertiajs/vue3';
 
 import BasicTooltip from '@/Components/Tooltips/BasicTooltip.vue';
 import CustomSelect from '@/Components/custom-html/CustomSelect.vue'
@@ -473,6 +474,23 @@ const refreshWalletList = async () => {
         ?.finally(() => {
             loadingWalletList.value = false;
         });
+}
+
+const takeMyPlace = (event) => { // WIP
+    if (!selectedWallet.value || !selectedWallet.value?.uuid) {
+        return;
+    }
+
+    let targetUrl = route('tailadmin_view', 'awaiting-draw');
+
+    console.log('takeMyPlace', targetUrl, selectedWallet.value);
+
+    router.visit(targetUrl, {
+        method: 'get',
+        data: {
+            gid: '302649e4-0eda-4836-8bfa-5c6eb285acf0',
+        },
+    });
 }
 
 const refreshRaffleGroupList = async () => {
@@ -1551,6 +1569,7 @@ const formatMoney = (value, currency) => {
 
                     <CustomizableButton
                         :disabled="!selectedWallet?.uuid"
+                        v-on:click.prevent="takeMyPlace"
                     >
                         Take my place
                         <template v-slot:right>
