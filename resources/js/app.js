@@ -19,13 +19,19 @@ import * as ObjectHelpers from '@/Helpers/object/object-helpers';
 import * as StringHelper from '@/Helpers/string/index';
 import * as StringHelpers from '@/Libs/Helpers/StringHelpers';
 import * as DataHelpers from '@/Libs/Helpers/DataHelpers';
+import * as TypesHelper from '@/Helpers/types/index';
 
-window.StringHelper = StringHelper;
-window.ObjectHelpers = ObjectHelpers;
-window.StringHelpers = StringHelpers;
-window.DataHelpers = DataHelpers;
+globalThis.StringHelper = StringHelper;
+globalThis.ObjectHelpers = ObjectHelpers;
+globalThis.StringHelpers = StringHelpers;
+globalThis.DataHelpers = DataHelpers;
+globalThis.TypesHelper = TypesHelper;
 
 let toMap = {
+    ...StringHelper,
+    ...ObjectHelpers,
+    ...StringHelpers,
+    ...TypesHelper,
     ...DataHelpers,
 };
 

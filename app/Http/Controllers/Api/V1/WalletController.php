@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Database\Seeders\FakeHelpers\FakeWalletHelpers;
+use App\Http\Requests\Auth\LoginRequest;
+use Illuminate\Http\JsonResponse;
 
 class WalletController extends Controller
 {
@@ -49,8 +51,10 @@ class WalletController extends Controller
         );
     }
 
-    public function balance(Request $request, string $walletId) // WIP
+    public function balance(LoginRequest $request, string $walletId): JsonResponse // WIP
     {
+        $request->authenticate();
+
         abort_unless(str($walletId)->isUuid(), 404);
 
         /**
@@ -91,7 +95,7 @@ class WalletController extends Controller
         );
     }
 
-    public function changeToWallet(Request $request, string $walletId) // WIP
+    public function changeToWallet(LoginRequest $request, string $walletId): JsonResponse // WIP
     {
         $request->authenticate();
 

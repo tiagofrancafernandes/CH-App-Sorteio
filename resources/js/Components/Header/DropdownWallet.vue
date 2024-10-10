@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="js">
 import { onClickOutside } from '@vueuse/core'
 import { ref, computed } from 'vue'
 import WalletIcon from '@/Components/icons/svg-icons/carbon-icons/Wallet.vue';
@@ -17,12 +17,14 @@ const activeWallet = ref(userActiveWallet.value || null); // WIP
 const dropdownOpenHandler = () => {
     return {
         get: () => keepOpenWalletList.value || false,
-        set: (value: any) => keepOpenWalletList.value = value,
+        set: (value = false) => {
+            keepOpenWalletList.value = value;
+        },
     }
 }
 
 onClickOutside(target, () => {
-    dropdownOpen.value = dropdownOpenHandler().get();
+    dropdownOpen.value = dropdownOpenHandler().get() ?? false;
 })
 
 const walletList = ref([
@@ -67,7 +69,7 @@ const walletList = ref([
     },
 ])
 
-const updateUserWallet = (walletData: any) => {
+const updateUserWallet = (walletData) => {
     if (walletData && walletData.uuid) {
         activeWallet.value = walletData.uuid;
     }
@@ -77,7 +79,7 @@ const parentHandler = () => {
     return {
         activeWallet: {
             get: () => activeWallet.value,
-            set: (value: any) => activeWallet.value = value,
+            set: (value) => activeWallet.value = value,
         },
     }
 };

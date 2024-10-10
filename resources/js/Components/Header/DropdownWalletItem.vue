@@ -14,6 +14,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import Modal from '@/Components/Modal.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import { isFunction, ifObjectOr } from '@/Helpers/types';
 // MODAL END
 
 const user = usePage().props.auth.user;
@@ -37,6 +38,7 @@ const props = defineProps({
         required: true,
     },
     keepOpenWalletList: {
+        type: Object,
         default: null,
     },
     activeWallet: {
@@ -45,51 +47,63 @@ const props = defineProps({
     parentHandler: {
         default: null,
     },
+    openWallet: {
+        type: Boolean,
+        default: false,
+    },
 });
+
 const emit = defineEmits(['selected']);
 
 const walletItem = ref(null);
 const showBalance = ref(false);
-const keepOpenWalletList = ref(false);
+const openWallet = ref(!!(props?.openWallet || false));
+const keepOpenWalletList = props?.keepOpenWalletList || {
+    get: () => openWallet.value || false,
+    set: (value) => openWallet.value = !!value,
+};
 
 const passwordInput = ref(null);
 
 const balance = ref(props?.balance || null);
 const wallet = ref(props?.walletInfo || {});
-const walletId = computed(() => wallet.value?.uuid || wallet.value?.id);
+const activeWalletId = computed(() => wallet.value?.uuid || wallet.value?.id);
 const computedBalance = computed(() => balance.value || null);
 const isActiveWallet = computed(() => {
     let activeWallet = props.parentHandler?.activeWallet?.get()?.value || props.activeWallet
-    return activeWallet === walletId.value
+    return activeWallet === activeWalletId.value
 });
 const formatedBalance = computed(() => {
     return balance.value || StringHelper.limit('***********', 7, '');
 });
 
 onClickOutside(walletItem, () => {
-    showBalance.value = false;
-    balance.value = null;
-
-    props?.keepOpenWalletList?.set(true);
-})
-
-const changeWalletRequest = (config = {}) => {
-    config = config || {};
-    config = typeof config === 'object' && Array.isArray(config) ? config : {};
-
-    let params = {
-        walletId: walletId.value,
+    if (!showModalComponent.value) {
+        showBalance.value = false;
+        balance.value = null;
     }
 
+    // console.log('onClickOutside walletItem', showModalComponent.value);
+
+    // if (!showModalComponent.value) {
+    //     keepOpenWalletList?.set(false);
+    // }
+})
+
+const getCredentialsPayload = (options = {
+    closeModalOnFail: true,
+}) => {
+    options = ifObjectOr(options, {});
+
+    let closeModalOnFail = toBool(options?.closeModalOnFail)
+
     if (!passwordInput.value) {
-        console.error(`Password is required`);
+        credentialsForm.errors.password = `Password is required`;
         return;
     }
 
-    let balanceUrl = route('api.wallet.change', params);
-
-    if (!balanceUrl) {
-        modalCloseAction();
+    if (passwordInput.value?.length < 6) {
+        credentialsForm.errors.password = `Password must have more than 6 chars`;
         return;
     }
 
@@ -98,6 +112,31 @@ const changeWalletRequest = (config = {}) => {
         intent: credentialsForm.intent,
         password: credentialsForm.password,
     };
+
+    return requestBody;
+}
+
+const changeWalletRequest = (config = {}) => {
+    config = ifObjectOr(config, {});
+    let { walletId } = config;
+
+    if (!walletId || typeof walletId !== 'string') {
+        credentialsForm.errors.password = 'Invalid wallet';
+        return;
+    }
+
+    let requestBody = getCredentialsPayload();
+
+    let params = {
+        walletId,
+    }
+
+    let balanceUrl = route('api.wallet.change', params);
+
+    if (!balanceUrl) {
+        modalCloseAction();
+        return;
+    }
 
     fetch(
         balanceUrl,
@@ -123,8 +162,6 @@ const changeWalletRequest = (config = {}) => {
                 throw `Fail on change wallet`;
             }
 
-            modalCloseAction();
-
             config?.onSuccess && config?.onSuccess(data);
 
             passwordInput.value = '';
@@ -136,19 +173,25 @@ const changeWalletRequest = (config = {}) => {
         });
 };
 
-const changeToThisWallet = () => {
+const changeToThisWallet = (wallet = null) => {
     confirmUserCredentials({
         confirm: () => {
             console.log('antes do if');
             if (!isActiveWallet.value) {
                 console.log('dentro do if');
                 changeWalletRequest({
+                    wallet,
+                    walletId: wallet?.uuid,
                     onSuccess: () => {
                         emit('selected', wallet);
-                        if (props.parentHandler?.activeWallet?.get()?.value === walletId) {
+
+                        if (props.parentHandler?.activeWallet?.get()?.value === activeWalletId) {
                             return;
                         }
-                        props.parentHandler?.activeWallet?.set(walletId);
+
+                        props.parentHandler?.activeWallet?.set(activeWalletId);
+
+                        closeModal();
                     },
                 });
             }
@@ -175,13 +218,14 @@ const defaultModalActions = () => ({
 const modalActions = ref(defaultModalActions());
 
 const setModalAction = (action, callable) => {
-    console.log(action, callable);
+    console.log('setModalAction', action, callable);
     let _actions = modalActions.value || {};
     _actions[action] = callable;
     modalActions.value = _actions;
 }
 
 const modalConfirmAction = () => {
+    console.log('modalConfirmAction');
     try {
         modalActions.value?.confirm && modalActions.value?.confirm();
     } catch (error) {
@@ -191,12 +235,28 @@ const modalConfirmAction = () => {
 
 const modalCloseAction = () => {
     try {
-        modalActions.value?.close && modalActions.value?.close();
+        if (!isObject(modalActions.value)) {
+            closeModal();
+            return;
+        }
+
+        let selfCalled = () => `${modalActions.value?.close}`.includes('modalCloseAction');
+
+        if (selfCalled()) {
+            modalActions.value.close = closeModal;
+        }
+
+        if (!modalActions.value?.close || !isFunction(modalActions.value?.close) || selfCalled()) {
+            closeModal();
+            return;
+        }
+
+        modalActions.value?.close();
+        modalActions.value.close = closeModal;
     } catch (error) {
         console.error(error);
+        closeModal();
     }
-
-    closeModal();
 }
 
 const showModal = (modalActionsConfig = {}) => {
@@ -214,14 +274,15 @@ const showModal = (modalActionsConfig = {}) => {
         setModalAction('close', modalActionsConfig?.close);
     }
 
+    keepOpenWalletList?.set(true);
     showModalComponent.value = true;
 }
 
 const closeModal = () => {
-    props?.keepOpenWalletList?.set(false);
     showModalComponent.value = false;
+    keepOpenWalletList?.set(false);
 
-    // credentialsForm.reset();
+    credentialsForm.reset();
     passwordInput.value = '';
 
     modalActions.value = defaultModalActions();
@@ -239,9 +300,22 @@ const credentialsForm = useForm({
     password: '',
 });
 
-const fetchBalanceData = () => {
+const fetchBalanceData = (walletId = null, config = {}) => {
+    config = ifObjectOr(config, {});
+    walletId = walletId || (config['walletId'] ?? config['wallet_id'] ?? null);
+
+    if (!walletId || typeof walletId !== 'string') {
+        credentialsForm.errors.password = 'Invalid wallet';
+        return;
+    }
+
+    let requestBody = {
+        ...getCredentialsPayload(),
+        intent: credentialsForm.intent,
+    };
+
     let params = {
-        walletId: walletId.value,
+        walletId,
     }
 
     if (!passwordInput.value) {
@@ -250,19 +324,13 @@ const fetchBalanceData = () => {
     }
 
     // let loginUrl = route('api.auth.login');
-    // let balanceUrl = getUrl(`/wallet/${walletId.value}/balance`, 'api');
+    // let balanceUrl = getUrl(`/wallet/${walletId}/balance`, 'api');
     let balanceUrl = route('api.wallet.balance', params);
 
     if (!balanceUrl) {
         modalCloseAction();
         return;
     }
-
-    let requestBody = {
-        email: credentialsForm.email,
-        intent: credentialsForm.intent,
-        password: credentialsForm.password,
-    };
 
     fetch(
         balanceUrl,
@@ -308,23 +376,35 @@ const fetchBalanceData = () => {
 };
 // ---- MODAL END
 
-const toggleShowBalance = () => {
+const toggleShowBalance = (wallet) => {
+    wallet = ifObjectOr(wallet);
+
+    if (!wallet) {
+        credentialsForm.errors.password = 'Invalid wallet';
+        return;
+    }
+
     const cancelAction = () => {
         showBalance.value = false;
         balance.value = null;
         modalCloseAction();
     }
 
+    if (computedBalance.value) {
+        cancelAction();
+        return;
+    }
+
     confirmUserCredentials({
         confirm: () => {
-            console.log('toggleShowBalance: showBalance.value', showBalance.value);
-
             if (TypesHelper.isFilled(balance.value)) {
                 showBalance.value = false;
                 balance.value = null;
-                modalCloseAction();
+                closeModal();
                 return;
             }
+
+            fetchBalanceData(wallet?.uuid);
         },
         cancel: cancelAction,
         close: cancelAction,
@@ -351,7 +431,7 @@ const toggleShowBalance = () => {
                         <PrimaryButton
                             v-show="!isActiveWallet"
                             size="sm"
-                            @click="changeToThisWallet"
+                            @click="changeToThisWallet(wallet)"
                         >Select</PrimaryButton>
                         <p v-show="isActiveWallet" class="font-bold text-xs min-h-1">[ACTIVE WALLET]</p>
                     </div>
@@ -382,8 +462,8 @@ const toggleShowBalance = () => {
                     <button
                         type="button"
                         class="relative flex h-8.5 w-8.5 items-center justify-center rounded-full hover:text-primary dark:text-white"
-                        @click.prevent="toggleShowBalance"
-                        title="Show balance"
+                        @click.prevent="toggleShowBalance(wallet)"
+                        :title="(computedBalance ? 'Hide' : 'Show') + ' balance'"
                     >
                         <OpenedEyeIcon
                             v-show="!computedBalance"
