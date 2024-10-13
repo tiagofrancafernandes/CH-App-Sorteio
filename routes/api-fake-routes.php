@@ -5,25 +5,22 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\WalletController;
 use App\Http\Controllers\Api\V1\RaffleGroupController;
 
-Route::match(['get', 'post'], 'wallet/list/{currency?}', [WalletController::class, 'list'])
-        ?->middleware([
-            // 'auth',
-        ])
-    ?->where('currency', '^([a-zA-Z]{3})$')
+Route::middleware([
+    'auth:sanctum',
+])?->match(['get', 'post'], 'wallet/list/{currency?}', [WalletController::class, 'list'])
+        ?->where('currency', '^([a-zA-Z]{3})$')
         ?->name('api.wallet.list');
 
-Route::match(['get', 'post'], 'raffle_group/list/{currency?}', [RaffleGroupController::class, 'list'])
-        ?->middleware([
-            // 'auth',
-        ])
-    ?->where('currency', '^([a-zA-Z]{3})$')
+Route::middleware([
+    'auth:sanctum',
+])?->match(['get', 'post'], 'raffle_group/list/{currency?}', [RaffleGroupController::class, 'list'])
+        ?->where('currency', '^([a-zA-Z]{3})$')
         ?->name('api.raffle_group.list');
 
-Route::match(['get', 'post'], 'wallet/{walletId}/balance', [WalletController::class, 'balance'])
+Route::middleware([
+    'auth:sanctum',
+])?->match(['get', 'post'], 'wallet/{walletId}/balance', [WalletController::class, 'balance'])
         ?->where('wallet', '^[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}$')
-        ?->middleware([
-            // 'auth',
-        ])
         ?->name('api.wallet.balance');
 
 Route::post('wallet/{walletId}/change', [WalletController::class, 'changeToWallet'])
@@ -102,8 +99,4 @@ Route::match(['get', 'post'], 'group/check-pass/{groupId?}', function (Request $
         'groupId' => $groupId,
         'token' => Hash::make($request?->input('pass_code')),
     ]);
-})
-    ?->middleware([
-        // 'auth',
-    ])
-    ?->name('api.group.check_pass');
+})?->name('api.group.check_pass');

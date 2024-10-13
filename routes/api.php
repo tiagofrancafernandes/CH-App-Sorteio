@@ -16,7 +16,10 @@ use Illuminate\Validation\ValidationException;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', fn (Request $request) => $request->user());
+Route::middleware([
+    'auth',
+    // 'auth:sanctum',
+])->get('/user', fn (Request $request) => [$request?->user()]);
 
 Route::post('auth/login', function (LoginRequest $request) { // WIP
     $request->authenticate();
