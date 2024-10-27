@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\Hash;
  * @property array|null $route_params
  * @property string|null $uri
  * @property mixed $password
- * @property mixed $plainPassword
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @method static \Database\Factories\ResourcePasswordFactory factory($count = null, $state = [])
