@@ -12,7 +12,7 @@ return new class() extends Migration {
     {
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id')->index();
+            $table->uuid('user_id')->index();
             $table->unsignedBigInteger('number')->unique()->index();
             $table->unsignedBigInteger('ticket_group_id')->index();
             $table->timestamps();

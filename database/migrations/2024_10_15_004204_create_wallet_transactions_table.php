@@ -30,10 +30,10 @@ return new class() extends Migration {
             $table->json('transaction_connector_info')->nullable(); // Informações úteis para a classe que criou ou é dona da transação como resposta, corpo, ID etc
             // ----------------- transaction_connector ----------------
 
-            $table->timestampTz('long_microtime', 8)->useCurrent()->index();
+            $table->timestampTz('long_microtime', 6)->useCurrent()->index();
 
-            $table->timestampsTz(8);
-            $table->softDeletesTz(8);
+            $table->timestampsTz(6);
+            $table->softDeletesTz(6);
 
             $table->foreign('wallet_id')->references('id')
                 ->on('wallets')->onDelete('cascade');
