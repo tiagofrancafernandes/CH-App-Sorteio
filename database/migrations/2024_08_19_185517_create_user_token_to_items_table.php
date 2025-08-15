@@ -19,7 +19,7 @@ return new class() extends Migration {
             $table->string('resource_key2_value')->index()->nullable();
             $table->string('token')->index();
             $table->timestamp('expires_at')->index()->nullable();
-            $table->unsignedBigInteger('user_id');
+            $table->uuid('user_id')->index();
 
             $table->foreign('user_id')->references('id')
                 ->on('users')->onDelete('cascade');

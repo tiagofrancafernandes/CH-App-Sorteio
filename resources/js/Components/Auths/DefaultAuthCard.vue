@@ -11,8 +11,8 @@ const props = defineProps(['subtitle', 'title', 'customClasses'])
       <div class="hidden w-full xl:block xl:w-1/2">
         <div class="py-17.5 px-26 text-center">
           <Link class="mb-5.5 inline-block" href="/">
-            <img class="hidden dark:block" src="@/assets/images/chronos/logo-md-wide-dark.png" alt="Logo" />
-            <img class="dark:hidden" src="@/assets/images/chronos/logo-md-wide-light.png" alt="Logo" />
+            <img class="hidden dark:block" src="@public/images/chronos/logo-md-wide-dark.png" alt="Logo" />
+            <img class="dark:hidden" src="@public/images/chronos/logo-md-wide-light.png" alt="Logo" />
           </Link>
 
           <p class="font-medium 2xl:px-20">

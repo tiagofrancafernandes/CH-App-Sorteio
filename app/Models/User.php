@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Database\Seeders\FakeHelpers\FakeWalletHelpers;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  *
@@ -35,6 +36,8 @@ use Database\Seeders\FakeHelpers\FakeWalletHelpers;
  * @property-read int|null $roles_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \Laravel\Sanctum\PersonalAccessToken> $tokens
  * @property-read int|null $tokens_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Wallet> $wallets
+ * @property-read int|null $wallets_count
  * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder|User newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder|User newQuery()
@@ -150,5 +153,15 @@ class User extends Authenticatable
                     )->first()
                 )
         );
+    }
+
+    /**
+     * Get all of the wallets for the User
+     *
+     * @return HasMany
+     */
+    public function wallets(): HasMany
+    {
+        return $this->hasMany(Wallet::class, 'user_id', 'id');
     }
 }

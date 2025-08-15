@@ -1,4 +1,5 @@
 {
+    "name": "chronos",
     "private": true,
     "type": "module",
     "scripts": {

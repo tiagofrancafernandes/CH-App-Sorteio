@@ -25,3 +25,5 @@ yarn-error.log
 *.log
 *.out
 _ide_helper*
+php_errors.log
+desktop.ini

@@ -35,22 +35,6 @@ class FakeWalletHelpers
 
     public static function currencies(): array
     {
-        return [
-            'BRL' => [
-                'code' => 'BRL',
-                'sign' => 'R$',
-                'locale' => 'pt_BR',
-            ],
-            'USD' => [
-                'code' => 'USD',
-                'sign' => '$',
-                'locale' => 'en_US',
-            ],
-            'EUR' => [
-                'code' => 'EUR',
-                'sign' => '€',
-                'locale' => 'en',
-            ],
-        ];
+        return \App\Enums\Currency::currencies(true);
     }
 }

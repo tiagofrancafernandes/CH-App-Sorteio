@@ -99,3 +99,22 @@ if (!function_exists('try_route')) {
         }
     }
 }
+
+if (!function_exists('long_microtime')) {
+    /**
+     * function long_microtime
+     *
+     * @param bool $toFloat
+     *
+     * @return string|float
+     */
+    function long_microtime(bool $toFloat = false): string|float
+    {
+        $value = implode(
+            '.',
+            array_map(fn ($item) => ltrim($item, '0.'), array_reverse(explode(' ', microtime($toFloat) . '')))
+        );
+
+        return $toFloat ? floatval($value) : $value;
+    }
+}
